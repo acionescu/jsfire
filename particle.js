@@ -96,9 +96,10 @@ Simulator.prototype.constructor = Simulator;
 
 /* cellular automata */
 
-function CellularAutomata(dimensions) {
+function CellularAutomata(dimensions,config) {
 
     Universe.call(this, dimensions);
+    this.config=config;
 }
 
 CellularAutomata.prototype = new Universe();
@@ -110,6 +111,7 @@ function Cell(position, shape, rule, state) {
     this.oldState = state;
     this.color = "Yellow";
     this.age = 0;
+    this.drawn=false;
     this.neighbors = new Array();
     PhysicalObject.call(this, position, shape);
 
@@ -128,7 +130,7 @@ Cell.prototype.addNeighbor = function(cell) {
 };
 
 Cell.prototype.draw = function(canvas) {
-    if (this.oldState == this.state) {
+    if ( this.drawn && this.oldState == this.state) {
 	return;
     }
     if (this.state) {
@@ -136,70 +138,6 @@ Cell.prototype.draw = function(canvas) {
     } else {
 	canvas.fillStyle = "Black";
     }
-
+    this.drawn = true;
     PhysicalObject.prototype.draw.apply(this, arguments);
-};
-
-function CellRule(dna) {
-    this.dna = dna;
-}
-
-CellRule.prototype.constructor = CellRule;
-CellRule.prototype.execute = function(cell) {
-    cell.state = false;
-};
-
-function CellRuleDNA(mask, maskSpin, changeRules) {
-    /* the mask used to count alive neighboring cells */
-    if (mask) {
-	this.mask = mask;
-    } else {
-	this.mask = [ 1, 1, 0, 1, 1, 1, 0, 1 ];
-    }
-    /* -1 to spin mask to the left, 1 to spin mask to the right */
-    if (maskSpin) {
-	this.maskSpin = maskSpin;
-    } else {
-	this.maskSpin = 1;
-    }
-    /*
-     * for the number of alive neighboring cells (0-8) set a state changing
-     * function
-     */
-    if (changeRules) {
-	this.changeRules = changeRules;
-    } else {
-	this.changeRules = {
-	    0 : "0",
-	    1 : "0",
-	    2 : "1",
-	    3 : "0",
-	    4 : "i",
-	    5 : "0",
-	    7 : "0",
-	    8 : "0"
-	};
-    }
-    this.operations = {
-	"0" : this.setStateOff,
-	"1" : this.setStateOn,
-	"i" : this.setInverseState
-    };
-}
-
-CellRuleDNA.prototype.constructor = CellRuleDNA;
-CellRuleDNA.prototype.change = function(cell, aliveNeighbors) {
-    var op = this.changeRules[aliveNeighbors];
-    if (op) {
-	this.operations[op](cell);
-    }
-};
-CellRuleDNA.prototype.setStateOn = function(cell) {
-    cell.state = 1;
-};
-CellRuleDNA.prototype.setStateOff = function(cell) {
-    cell.state = 0;
-};
-CellRuleDNA.prototype.setInverseState = function(cell) {
-    cell.state = (cell.state + 1) % 2;
 };

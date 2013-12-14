@@ -1,9 +1,141 @@
-var side = 101;
-var cellSize = 5;
+//var side = 101;
+//var cellSize = 5;
+
+//var middle = (Math.pow(side, 2) + 1) / cellSize;
+//var mask1 = [ 1, 1, 0, 1, 1, 1, 0, 1 ];
+//var mask2 = [ 1, 1, 0, 0, 0, 1, 1, 1 ];
+
 var automata;
-var middle = (Math.pow(side, 2) + 1) / cellSize;
-var mask1 = [ 1, 1, 0, 1, 1, 1, 0, 1 ];
-var mask2 = [ 1, 0, 1, 0, 0, 1, 1, 1 ];
+var currentConfig;
+
+function SimulationConfig() {
+    this.side = 101;
+    this.cellSize = 5;
+    this.middle = (Math.pow(this.side, 2) + 1) / this.cellSize;
+    this.mask1 = [ 1, 1, 0, 1, 1, 1, 0, 1 ];
+    this.mask2 = [ 1, 1, 0, 0, 0, 1, 1, 1 ];
+    this.changeRules1 = "0,0,1,0,0,i,1,0,0";
+    this.changeRules2 = "0,0,1,0,0,i,1,0,0";
+    this.autoSpark = true;
+    this.useBurnMode = false;
+    
+    this.allowedChangeRules={"0":1,"1":1,"i":1,"k":1};
+}
+
+SimulationConfig.prototype.validate = function(errors){
+    this.validateMask(this.mask1,errors);
+    this.validateMask(this.mask2,errors);
+    this.validateChangeRules(this.changeRules1,errors);
+    this.validateChangeRules(this.changeRules2,errors);
+    
+    return errors;
+};
+
+SimulationConfig.prototype.validateMask = function(mask,errors){
+    
+    if(mask.length != 8){
+	errors.push("The mask should contain exactly 8 elements");
+	return;
+    }
+    
+    for(var i=0;i<8;i++){
+	if(mask[i] != 0 && mask[i] != 1){
+	    errors.push("The mask can contain only 1 or 0 values");
+	    return;
+	}
+    }
+};
+
+SimulationConfig.prototype.validateChangeRules = function(rules,errors){
+    
+    if(rules.length != 9){
+	errors.push("The change rules vector should contain exactly 9 elements");
+	return;
+    }
+    
+    for(var i=0;i<9;i++){
+	var e = rules[i];
+	if(!this.allowedChangeRules[e]){
+	    errors.push("The only allowed change rules are 0 - off,1 - on, i - reverse state, k - keep current state");
+	    return;
+	}
+    }
+};
+
+function CellRule(dna) {
+    this.dna = dna;
+}
+
+CellRule.prototype.constructor = CellRule;
+CellRule.prototype.execute = function(cell) {
+    cell.state = false;
+};
+
+function CellRuleDNA(mask, maskSpin, changeRules) {
+    /* the mask used to count alive neighboring cells */
+    if (mask) {
+	this.mask = mask;
+    } else {
+	this.mask = [ 1, 1, 0, 1, 1, 1, 0, 1 ];
+    }
+    /* -1 to spin mask to the left, 1 to spin mask to the right */
+    if (maskSpin) {
+	this.maskSpin = maskSpin;
+    } else {
+	this.maskSpin = 1;
+    }
+    /*
+     * for the number of alive neighboring cells (0-8) set a state changing
+     * function
+     */
+    if (changeRules) {
+	this.changeRules = changeRules;
+    } else {
+	this.changeRules = [ "0", "0", "1", "0", "0", "i", "1", "0", "0" ];
+    }
+    this.operations = {
+	"0" : this.setStateOff,
+	"1" : this.setStateOn,
+	"i" : this.setInverseState,
+	"k" : function(){}
+    };
+}
+
+CellRuleDNA.prototype.constructor = CellRuleDNA;
+CellRuleDNA.prototype.change = function(cell, aliveNeighbors) {
+    var op = this.changeRules[aliveNeighbors];
+    if (op) {
+	this.operations[op](cell);
+    }
+};
+CellRuleDNA.prototype.setStateOn = function(cell) {
+    cell.state = 1;
+};
+CellRuleDNA.prototype.setStateOff = function(cell) {
+    cell.state = 0;
+};
+CellRuleDNA.prototype.setInverseState = function(cell) {
+//    cell.state = (cell.state + 1) % 2;
+    cell.state ^= 1;
+};
+CellRuleDNA.prototype.combine = function(sources, size) {
+    var res = [];
+    var sourceSize = sources.length;
+    for (var i = 0; i < size; i++) {
+	/* parent index */
+	var pi = i % sourceSize;
+	res[i] = sources[pi][i];
+    }
+    return res;
+};
+
+CellRuleDNA.prototype.crossover = function(dna) {
+    var newMask = this.combine([ this.mask, dna.mask ], 8);
+    var newChangeRules = this.combine([ this.changeRules, dna.changeRules ], 8);
+    var newSpin = this.maskSpin * dna.maskSpin;
+
+    return new CellRuleDNA(newMask, newSpin, newChangeRules);
+};
 
 function CellRule1(mask) {
     this.mask = mask;
@@ -67,8 +199,9 @@ CellRule1.prototype.execute = function(cell) {
 
 };
 
-function CellRule2(dna){
-    CellRule.call(this,dna);
+function CellRule2(dna) {
+    CellRule.call(this, dna);
+    this.tick = 0;
 }
 
 CellRule2.prototype = new CellRule();
@@ -79,10 +212,13 @@ CellRule2.prototype.execute = function(cell) {
     var size = n.length;
     var m = this.dna.mask;
 
+    var parents = [];
+
     /* apply mask */
     for (var i = 0; i < size; i++) {
 	if (n[i].oldState & m[i]) {
 	    alive++;
+	    parents.push(n[i]);
 	}
     }
     /* apply change rules */
@@ -94,9 +230,26 @@ CellRule2.prototype.execute = function(cell) {
     } else {
 	m.push(m.shift());
     }
+
+    // if(cell.state){
+    // this.dna = this.dna.crossover(parents[0].rule.dna);
+    // }
+
+//    this.tick++;
+//    this.tick %= 8;
+//
+//    if (this.tick == 0) {
+//	this.dna.maskSpin *= -1;
+//    }
 };
 
-function populateAutomata(automata, w, h, cs) {
+function populateAutomata(automata) {
+    var config = automata.config;
+    var side = config.side;
+    var w = side;
+    var h = side;
+    var cs = config.cellSize;
+
     var prev1 = new Array();
     var prev2 = new Array();
     var current = new Array();
@@ -115,16 +268,20 @@ function populateAutomata(automata, w, h, cs) {
 
     while (++count <= total) {
 	p = new Point([ col, row ]);
-	var m = mask1;
-	// if(col * row < middle){
-	// m=mask2;
-	// }
+	var m = config.mask1;
+	var changeRules = config.changeRules1;
+
 	if (Math.sqrt(Math.pow(Math.abs(side / 2 - col), 2)
 		+ Math.pow(Math.abs(side / 2 - row), 2)) > 30) {
-	    m = mask2;
+	    m = config.mask2;
+	    changeRules = config.changeRules2;
 	}
-	var cellDna = new CellRuleDNA(m);
+	var cellDna = new CellRuleDNA(m, 1, changeRules);
 	cell = new Cell(p, new Rectangle(cs, cs), new CellRule2(cellDna), 0);
+	if(config.useBurnMode){
+	    cell.drawn=true;
+	}
+	
 	var addprev2 = true;
 
 	if (col > 0) {
@@ -198,56 +355,57 @@ function populateAutomata(automata, w, h, cs) {
     }
 }
 
-function createAutomata(width, height) {
+function createAutomata(config) {
 
-    var ca = new CellularAutomata(2);
+    var ca = new CellularAutomata(2, config);
 
-    populateAutomata(ca, width, height, cellSize);
+    populateAutomata(ca);
     return ca;
 
 }
 
-function startSimulation(canvas) {
+var interval;
 
+function startSimulation(canvas, config) {
+    currentConfig = config;
+    var side = config.side;
     var ctx = canvas.getContext("2d");
+    var width = side*config.cellSize;
+    ctx.clearRect(0,0,width,width);
+    
     // ctx.width=side;
     // ctx.height=side;
     canvas.addEventListener('mousedown', mouseDownHandler, false);
     canvas.addEventListener('mouseup', mouseUpHandler, false);
 
-    automata = createAutomata(side, side);
+    automata = createAutomata(config);
     // automata.objects[(side * side + 1) / 2].state = 1;
     // automata.objects[((side * side + 1) / 2) + 1].state = 1;
 
     var output = new Array();
     var input = new Array();
     var mid = (side * side + 1) / 2 + side;
-    for (var i = mid - 3; i < mid + 4; i++) {
-	output.push(automata.objects[i]);
-	input.push(automata.objects[i + 4000]);
+    for (var i = mid - 100; i < mid + 100; i++) {
+//	output.push(automata.objects[i]);
+//	input.push(automata.objects[i + 4000]);
+	if (config.autoSpark) {
+	    automata.objects[i].state = 1;
+	}
     }
 
     var simulator = new Simulator(automata, ctx);
     var c = 0;
 
-    setInterval(function() {
-	// automata.compute();
-	// if(c > 3.14){
-	// c=0;
-	// }
+    interval = setInterval(function() {
 
-	// console.log(Math.floor((Math.sin(c)*128)));
-	// setInput(input,Math.floor((Math.sin(c)*128)).toString(2));
-	// c+=0.08;
 	simulator.run();
-	// automata.draw(ctx);
-	// console.log(readOutput(output));
+
     }, 20);
 
-    // setInterval(function() {
-    // automata.draw(ctx);
-    // }, 200);
+}
 
+function stopSimulation(){
+    clearInterval(interval);
 }
 
 function readOutput(out) {
@@ -293,8 +451,9 @@ function mouseMoveHandler(event) {
 
 function flipCell(event) {
     var coords = relMouseCoords(event);
-    var cell = automata.getObjectByCoords([ Math.ceil(coords.x / cellSize) - 1,
-	    Math.ceil(coords.y / cellSize) - 1 ]);
+    var cell = automata.getObjectByCoords([
+	    Math.ceil(coords.x / currentConfig.cellSize) - 1,
+	    Math.ceil(coords.y / currentConfig.cellSize) - 1 ]);
     cell.state ^= 1;
 }
 

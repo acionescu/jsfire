@@ -1,25 +1,149 @@
 <!DOCTYPE html>
 <html>
-<body>
-<script src="particle.js"></script>
-<script src="automata_test.js"></script>
+<head>
+<style type="text/css">
+.controls {
+	float: left;
+}
 
-<canvas id="myCanvas" width="505" height="505" style="border:1px solid #c3c3c3;  padding-left: 0;
-    padding-right: 0;
-    margin-left: auto;
-    margin-right: auto;
-    display: block;" >
+.drawArea {
+	/* 	position: relative; */
+	float: left;
+	border: 1px solid #c3c3c3;
+	padding-left: 0;
+	padding-right: 0;
+	margin-left: 200px;
+	margin-right: 20px;
+	border: 1px solid #c3c3c3;
+	/* 	display: block; */
+}
+
+.displayArea {
+	/* 	margin-left: 300px; */
+	/* 	margin-right: auto; */
+	/* 	display: block; */
+	
+}
+
+.mediumControls {
+	border: thin solid grey;
+	padding: 10px 10px 10px 10px;
+}
+
+.dyn-form ul {
+	list-style-type: none;
+	padding: 0px;
+	margin: 0px;
+	margin-top: 10px;
+}
+
+.dyn-form li {
+	padding: 0px;
+	/* 	margin: 0px; */
+	/* 	margin: 20px 0px 20px 0px; */
+	height: 50px;
+}
+
+.dyn-form div,span /*.li-box*/ {
+	/* 	padding: 0px; */
+	/* 	margin: 0px; */
+	display: inline-block;
+}
+
+.dyn-form label {
+	display: inline-block;
+	width: 130px;
+}
+
+.dyn-form input,textarea,select {
+	display: inline-block;
+	margin-left: 10px;
+	box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	-webkit-box-sizing: border-box;
+	height: 33px;
+	vertical-align: middle;
+}
+
+.dyn-form a {
+	display: inline-block;
+	margin-left: 10px;
+}
+</style>
+
+</head>
+
+<body>
+	<script src="http://code.jquery.com/jquery-2.0.3.min.js"></script>
+	<script src="particle.js"></script>
+	<script src="automata_test.js"></script>
+
+	<div class="displayArea">
+
+		<canvas id="myCanvas" width="505" height="505" class="drawArea">
 Your browser does not support the HTML5 canvas tag.
 </canvas>
+		<div id="controls" class="controls dyn-form">
+			Inner medium:<br>
+			<div id="innerMedium" class="mediumControls">
 
-<script>
+				<label>Mask:</label> <input id="mask" value="1, 1, 0, 1, 1, 1, 0, 1"><br />
+				<label>Change rules:</label> <input id="changeRules"
+					value="0,0,1,0,i,0,k,0,0">
+			</div>
+			<br> <br> Outer medium:<br>
+			<div id="outerMedium" class="mediumControls">
+				<label>Mask:</label> <input id="mask" value="0, 1, 0, 1, 1, 0, 1, 1"><br>
+				<label>Change rules:</label> <input id="changeRules"
+					value="0,0,1,0,0,i,1,0,0">
+			</div>
+			<br> <br>
+			<div id="general">
+				<input type="checkbox" id="autoSpark" checked>Autospark<br>
+				<input type="checkbox" id="burnMode">Use burn mode<br>
+			</div>
+			<br> <br> <input type="button" value="Restart" onclick="run()">
+		</div>
 
-var c=document.getElementById("myCanvas");
 
+	</div>
 
-startSimulation(c);
+	<script>
+	// 	var c = document.getElementById("myCanvas");
 
-</script>
+	// 	startSimulation(c);
+
+	$(document).ready(function() {
+	    run();
+	});
+	
+	function run(){
+	    
+	    stopSimulation();
+	    
+	    var config = new SimulationConfig();
+	    var c = document.getElementById("myCanvas");
+
+	    config.mask1 = $("#innerMedium #mask").val().split(",");
+	    config.mask2 = $("#outerMedium #mask").val().split(",")
+	    
+	    config.changeRules1=$("#innerMedium #changeRules").val().split(",");
+	    config.changeRules2=$("#outerMedium #changeRules").val().split(",");
+	    
+	    config.autoSpark=$("#autoSpark").is(":checked");
+	    config.useBurnMode=$("#burnMode").is(":checked");
+	    
+	    var errors=config.validate([]);
+	    
+	    if(errors.length > 0){
+		alert(errors);
+		return;
+	    }
+	    
+	    startSimulation(c, config);
+	}
+	
+    </script>
 
 </body>
 </html>
