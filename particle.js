@@ -109,8 +109,10 @@ function Cell(position, shape, rule, state) {
     this.rule = rule;
     this.state = state;
     this.oldState = state;
-    this.color = "Yellow";
-    this.age = 0;
+    this.color = 'Yellow';
+    this.age = 0;;
+    this.gravity=0;
+    this.oldg=this.gravity;
     this.drawn=false;
     this.neighbors = new Array();
     PhysicalObject.call(this, position, shape);
@@ -122,6 +124,7 @@ Cell.prototype.constructor = Cell;
 
 Cell.prototype.compute = function(automata) {
     this.oldState = this.state;
+    this.oldg = this.gravity;
     this.rule.execute(this);
 };
 
@@ -130,13 +133,14 @@ Cell.prototype.addNeighbor = function(cell) {
 };
 
 Cell.prototype.draw = function(canvas) {
-    if ( this.drawn && this.oldState == this.state) {
+    if ( this.drawn && this.oldState == this.state && this.oldg == this.gravity) {
 	return;
     }
     if (this.state) {
 	canvas.fillStyle = this.color;
     } else {
-	canvas.fillStyle = "Black";
+//	canvas.fillStyle =  '#' + ('00000' + (((this.gravity)*0xffffff) | 0).toString(16)).substr(-6);
+	canvas.fillStyle='Black';
     }
     this.drawn = true;
     PhysicalObject.prototype.draw.apply(this, arguments);
