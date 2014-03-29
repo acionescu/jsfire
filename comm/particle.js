@@ -2,6 +2,23 @@ function Point(coords) {
     this.coords = coords;
 }
 
+Point.prototype.distance= function(point)
+{
+    if (this.coords.length != point.coords.length) {
+	throw "Can't compute distance between points with different dimensions: "
+		+ this.coords + " and " + point.coords;
+    }
+    
+    var sum=0;
+    
+    for(var i=0;i<this.coords.length;i++){
+	sum += Math.pow(point.coords[i]-this.coords[i], 2);
+    }
+    
+    return Math.sqrt(sum);
+    
+};
+
 function Shape() {
 
 }
@@ -96,10 +113,10 @@ Simulator.prototype.constructor = Simulator;
 
 /* cellular automata */
 
-function CellularAutomata(dimensions,config) {
+function CellularAutomata(dimensions, config) {
 
     Universe.call(this, dimensions);
-    this.config=config;
+    this.config = config;
 }
 
 CellularAutomata.prototype = new Universe();
@@ -110,10 +127,11 @@ function Cell(position, shape, rule, state) {
     this.state = state;
     this.oldState = state;
     this.color = 'Yellow';
-    this.age = 0;;
-    this.gravity=0;
-    this.oldg=this.gravity;
-    this.drawn=false;
+    this.age = 0;
+    ;
+    this.gravity = 0;
+    this.oldg = this.gravity;
+    this.drawn = false;
     this.neighbors = new Array();
     PhysicalObject.call(this, position, shape);
 
@@ -133,14 +151,16 @@ Cell.prototype.addNeighbor = function(cell) {
 };
 
 Cell.prototype.draw = function(canvas) {
-    if ( this.drawn && this.oldState == this.state && this.oldg == this.gravity) {
+    if (this.drawn && this.oldState == this.state && this.oldg == this.gravity) {
 	return;
     }
     if (this.state) {
 	canvas.fillStyle = this.color;
     } else {
-	canvas.fillStyle =  '#' + ('000000' + (((this.gravity)*0xffffff) | 0).toString(16)).substr(-6);
-//	canvas.fillStyle='Black';
+	canvas.fillStyle = '#'
+		+ ('000000' + (((this.gravity) * 0xffffff) | 0).toString(16))
+			.substr(-6);
+	// canvas.fillStyle='Black';
     }
     this.drawn = true;
     PhysicalObject.prototype.draw.apply(this, arguments);
