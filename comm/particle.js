@@ -2,21 +2,36 @@ function Point(coords) {
     this.coords = coords;
 }
 
-Point.prototype.distance= function(point)
-{
+Point.prototype.distance = function(point) {
+   this.checkPointDimension(point);
+
+    var sum = 0;
+
+    for (var i = 0; i < this.coords.length; i++) {
+	sum += Math.pow(point.coords[i] - this.coords[i], 2);
+    }
+
+    return Math.sqrt(sum);
+
+};
+
+Point.prototype.checkPointDimension=function(point){
     if (this.coords.length != point.coords.length) {
 	throw "Can't compute distance between points with different dimensions: "
 		+ this.coords + " and " + point.coords;
     }
+};
+
+Point.prototype.add=function(point){
+    this.checkPointDimension(point);
     
-    var sum=0;
+    var nc=[];
     
-    for(var i=0;i<this.coords.length;i++){
-	sum += Math.pow(point.coords[i]-this.coords[i], 2);
+    for (var i = 0; i < this.coords.length; i++) {
+	nc[i]=this.coords[i]+point.coords[i];
     }
     
-    return Math.sqrt(sum);
-    
+    return new Point(nc);
 };
 
 function Shape() {
@@ -49,11 +64,67 @@ CustomShape.prototype = new Shape();
 CustomShape.prototype.constructor = CustomShape;
 
 function PhysicalObject(position, shape, mass) {
+    this.id;
+    /** The universe where this object exists */
+    this.universe;
     this.shape = shape;
     this.mass = mass;
     this.position = position;
+    /**
+     * Relative position to the parent
+     */
+    this.relPos;
 
-}
+    this.partsMap = {};
+
+    this.parts = [];
+
+};
+
+/**
+ * Called when this object is added to the universe
+ * 
+ * @param universe
+ */
+PhysicalObject.prototype.onAttach = function(universe) {
+    this.Universe = universe;
+
+    /* add all parts to the universe */
+    this.parts.forEach(function(part) {
+	universe.addObject(part);
+    });
+
+    /* now we're sure that all parts have an id */
+    this.indexParts();
+};
+
+/**
+ * Determine part absolute position from the parent's position
+ * @param part
+ */
+PhysicalObject.prototype.determinePartPosition=function(part){
+    var pPos = new Point(this.position.coords.slice());
+    if(part.relPos){
+	pPos=pPos.add(part.relPos);
+    }
+    part.position=pPos;
+};
+
+/**
+ * Maps the parts on their ids
+ */
+PhysicalObject.prototype.indexParts = function() {
+    this.parts.forEach(function(part) {
+	this.partsMap[part.id] = part;
+    }, this);
+};
+
+/**
+ * Called when this object is removed from an universe
+ */
+PhysicalObject.prototype.onDettach = function() {
+
+};
 
 /* override this for specific behavior */
 PhysicalObject.prototype.compute = function(universe) {
@@ -61,6 +132,30 @@ PhysicalObject.prototype.compute = function(universe) {
 
 PhysicalObject.prototype.draw = function(canvas) {
     this.shape.draw(canvas, this.position);
+};
+
+/**
+ * Adds a part to this object
+ * 
+ * @param part
+ * @param relPos
+ *                relative position of the part to the parent
+ */
+PhysicalObject.prototype.addPart = function(part, relPos) {
+    if (!part.id) {
+	this.partsMap[part.id] = part;
+    }
+    /* if the part doesn't have a position, copy the position of the parent */
+    if (!relPos) {
+	part.relpos = relPos;
+    }
+
+    this.parts.push(part);
+
+};
+
+PhysicalObject.prototype.removePart = function(part) {
+    delete this.parts[part.id];
 };
 
 function Universe(dimensions) {
@@ -84,6 +179,12 @@ Universe.prototype.draw = function(canvas) {
 };
 
 Universe.prototype.addObject = function(object) {
+    if (!object.id) {
+	object.id = "PhysObj-" + (this.objects.length + 1);
+    }
+    if (!object.position) {
+	object.position = new Point([ 0, 0 ]);
+    }
 
     this.objects.push(object);
     this.pointsObjects[object.position.coords] = object;

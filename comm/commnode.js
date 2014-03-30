@@ -51,7 +51,7 @@ CommNode.prototype.sendMessage = function(message) {
 };
 
 /**
- * a function to handle a received signal from the tranceiver
+ * a function to handle a received signal from the transceiver
  * 
  * @param signal
  */
