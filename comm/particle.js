@@ -77,7 +77,7 @@ function PhysicalObject(position, shape, mass) {
 
     this.partsMap = {};
 
-    this.parts = [];
+    this.parts = new Array();
 
 };
 
@@ -87,12 +87,13 @@ function PhysicalObject(position, shape, mass) {
  * @param universe
  */
 PhysicalObject.prototype.onAttach = function(universe) {
-    this.Universe = universe;
+    this.universe = universe;
 
     /* add all parts to the universe */
     this.parts.forEach(function(part) {
+	this.determinePartPosition(part);
 	universe.addObject(part);
-    });
+    },this);
 
     /* now we're sure that all parts have an id */
     this.indexParts();
@@ -107,6 +108,7 @@ PhysicalObject.prototype.determinePartPosition=function(part){
     if(part.relPos){
 	pPos=pPos.add(part.relPos);
     }
+    
     part.position=pPos;
 };
 
@@ -149,7 +151,6 @@ PhysicalObject.prototype.addPart = function(part, relPos) {
     if (!relPos) {
 	part.relpos = relPos;
     }
-
     this.parts.push(part);
 
 };
@@ -188,6 +189,9 @@ Universe.prototype.addObject = function(object) {
 
     this.objects.push(object);
     this.pointsObjects[object.position.coords] = object;
+    console.log("Added object "+object.id+ " at pos "+object.position.coords);
+    /* make the object aware that it has been added to the universe */
+    object.onAttach(this);
 };
 
 Universe.prototype.getObjectByCoords = function(coords) {

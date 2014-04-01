@@ -6,6 +6,8 @@
  * Definition of a communication node
  */
 function CommNode(id, transceiver, protocol) {
+    PhysicalObject.call(this);
+    
     /** id of the node */
     this.id = id;
 
@@ -24,9 +26,15 @@ function CommNode(id, transceiver, protocol) {
 
     /* register itself as a listener to the transceiver */
     this.transceiver.registerListener(this);
+    
+    /**
+     * add the transceiver as a physical part of the comm node
+     */
+    this.addPart(this.transceiver);
 
 };
 
+CommNode.prototype=new PhysicalObject();
 CommNode.prototype.constructor = CommNode;
 
 /** a function to discover peers */
@@ -55,7 +63,7 @@ CommNode.prototype.sendMessage = function(message) {
  * 
  * @param signal
  */
-CommNode.prototype.onSignal = function(signal) {
+CommNode.prototype.receive = function(signal) {
     this.onMessage(this.protocol.decodeSignal(signal));
 };
 
@@ -152,12 +160,16 @@ CommProtocol.prototype.decodeSignal = function(signal) {
 /**
  * Definition of a generic communication transceiver
  */
-function Transceiver(medium) {
-    /**
-     * The medium that the transceiver interacts with
-     */
-    this.medium = medium;
+function Transceiver(id) {
+//    /**
+//     * The medium that the transceiver interacts with
+//     */
+//    this.medium = medium;
 
+    PhysicalObject.call(this);
+    
+    this.id=id;
+    
     /**
      * The power used to transmit a signal
      */
@@ -175,6 +187,7 @@ function Transceiver(medium) {
  * have position
  */
 Transceiver.prototype = new PhysicalObject();
+
 Transceiver.prototype.constructor = Transceiver;
 
 /**
@@ -188,7 +201,9 @@ Transceiver.prototype.transmit = function(signal) {
 	signal.power = this.transmissionPower;
     }
     signal.sourcePosition=this.position;
-    this.medium.propagate(signal);
+    /* propagate the signal through the comm medium ( universe ) */
+    
+    this.universe.propagate(signal);
 };
 
 /**
@@ -198,7 +213,7 @@ Transceiver.prototype.transmit = function(signal) {
  */
 Transceiver.prototype.receive = function(signal) {
     for (var i = 0; i < this.listeners.length; i++) {
-	this.listeners[i].onSignal(signal);
+	this.listeners[i].receive(signal);
     }
 };
 
@@ -224,6 +239,7 @@ Transceiver.prototype.registerListener = function(listener) {
  * A generic communication medium definition
  */
 function CommMedium() {
+    Universe.call(this);
     /**
      * The rate with which the power of a signal decays with every distance unit
      * traveled
@@ -246,9 +262,12 @@ CommMedium.prototype.constructor = CommMedium;
 CommMedium.prototype.propagate = function(signal) {
     var self = this;
     var sp = signal.sourcePosition;
-
+    
     /* make all the objects present in the medium receive the signal */
     this.objects.forEach(function(value) {
+	if(!value.onSignal){
+	   return;
+	}
 	var distance = sp.distance(value.position);
 	/* don't propagate message to self */
 	if(distance==0){
@@ -265,11 +284,11 @@ CommMedium.prototype.propagate = function(signal) {
     });
 };
 
-/**
- * Special method that adds a transceiver to the comm medium
- * @param transceiver
- */
-CommMedium.prototype.addTransceiver = function(transceiver) {
-    transceiver.medium = this;
-    this.addObject(transceiver);
-};
+///**
+// * Special method that adds a transceiver to the comm medium
+// * @param transceiver
+// */
+//CommMedium.prototype.addTransceiver = function(transceiver) {
+//    transceiver.medium = this;
+//    this.addObject(transceiver);
+//};
