@@ -3,7 +3,7 @@ function Point(coords) {
 }
 
 Point.prototype.distance = function(point) {
-   this.checkPointDimension(point);
+    this.checkPointDimension(point);
 
     var sum = 0;
 
@@ -15,22 +15,22 @@ Point.prototype.distance = function(point) {
 
 };
 
-Point.prototype.checkPointDimension=function(point){
+Point.prototype.checkPointDimension = function(point) {
     if (this.coords.length != point.coords.length) {
 	throw "Can't compute distance between points with different dimensions: "
 		+ this.coords + " and " + point.coords;
     }
 };
 
-Point.prototype.add=function(point){
+Point.prototype.add = function(point) {
     this.checkPointDimension(point);
-    
-    var nc=[];
-    
+
+    var nc = [];
+
     for (var i = 0; i < this.coords.length; i++) {
-	nc[i]=this.coords[i]+point.coords[i];
+	nc[i] = this.coords[i] + point.coords[i];
     }
-    
+
     return new Point(nc);
 };
 
@@ -38,10 +38,12 @@ function Shape() {
 
 }
 
+Shape.prototype.constructor = Shape;
 Shape.prototype.draw = function(canvas, position) {
 };
 
 function Rectangle(w, h) {
+    Shape.call(this);
     this.width = w;
     this.height = h;
 }
@@ -51,8 +53,34 @@ Rectangle.prototype.constructor = Rectangle;
 Rectangle.prototype.draw = function(canvas, position) {
     var coords = position.coords;
 
-    canvas.fillRect(coords[0] * this.width, coords[1] * this.height,
+    canvas.fillRect(coords[0] - this.width/2, coords[1] - this.height/2,
 	    this.width, this.height);
+};
+
+function Circle(radius) {
+    Shape.call(this);
+    this.radius = radius;
+    this.fillColor;
+    this.strokeColor = '#ff0000';
+
+}
+
+Circle.prototype = new Shape();
+Circle.prototype.constructor = Circle;
+
+Circle.prototype.draw = function(canvas, position) {
+    var coords = position.coords;
+    canvas.beginPath();
+    canvas.arc(coords[0], coords[1], this.radius, 0, 2 * Math.PI, false);
+    if (this.fillColor) {
+	canvas.fillStyle = this.fillColor;
+	canvas.fill();
+    }
+    if (this.strokeColor) {
+	canvas.strokeStyle = this.strokeColor;
+	canvas.stroke();
+    }
+//    console.log("draw circle "+this.radius);
 };
 
 function CustomShape(points) {
@@ -93,7 +121,7 @@ PhysicalObject.prototype.onAttach = function(universe) {
     this.parts.forEach(function(part) {
 	this.determinePartPosition(part);
 	universe.addObject(part);
-    },this);
+    }, this);
 
     /* now we're sure that all parts have an id */
     this.indexParts();
@@ -101,15 +129,16 @@ PhysicalObject.prototype.onAttach = function(universe) {
 
 /**
  * Determine part absolute position from the parent's position
+ * 
  * @param part
  */
-PhysicalObject.prototype.determinePartPosition=function(part){
+PhysicalObject.prototype.determinePartPosition = function(part) {
     var pPos = new Point(this.position.coords.slice());
-    if(part.relPos){
-	pPos=pPos.add(part.relPos);
+    if (part.relPos) {
+	pPos = pPos.add(part.relPos);
     }
-    
-    part.position=pPos;
+
+    part.position = pPos;
 };
 
 /**
@@ -128,12 +157,15 @@ PhysicalObject.prototype.onDettach = function() {
 
 };
 
+
 /* override this for specific behavior */
 PhysicalObject.prototype.compute = function(universe) {
 };
 
 PhysicalObject.prototype.draw = function(canvas) {
-    this.shape.draw(canvas, this.position);
+    if (this.shape) {
+	this.shape.draw(canvas, this.position);
+    }
 };
 
 /**
@@ -163,6 +195,7 @@ function Universe(dimensions) {
     this.dimensions = dimensions;
     this.objects = new Array();
     this.pointsObjects = new Object();
+    this.objectsIndex=0;
 }
 
 Universe.prototype.compute = function() {
@@ -170,6 +203,7 @@ Universe.prototype.compute = function() {
     for (var i = 0; i < this.objects.length; i++) {
 	this.objects[i].compute(this);
     }
+    ;
 };
 
 Universe.prototype.draw = function(canvas) {
@@ -177,11 +211,13 @@ Universe.prototype.draw = function(canvas) {
     for (var i = 0; i < this.objects.length; i++) {
 	this.objects[i].draw(canvas);
     }
+    ;
 };
 
 Universe.prototype.addObject = function(object) {
+    this.objectsIndex+=1;
     if (!object.id) {
-	object.id = "PhysObj-" + (this.objects.length + 1);
+	object.id = "PhysObj-" + (this.objectsIndex);
     }
     if (!object.position) {
 	object.position = new Point([ 0, 0 ]);
@@ -189,9 +225,18 @@ Universe.prototype.addObject = function(object) {
 
     this.objects.push(object);
     this.pointsObjects[object.position.coords] = object;
-    console.log("Added object "+object.id+ " at pos "+object.position.coords);
+    console.log("Added object " + object.id + " at pos "
+	    + object.position.coords);
     /* make the object aware that it has been added to the universe */
     object.onAttach(this);
+};
+
+Universe.prototype.removeObject = function(object) {
+    var objIndex = this.objects.indexOf(object);
+    this.objects.splice(objIndex, 1);
+    delete this.pointsObjects[object.position.coords];
+    object.onDettach(this);
+    console.log("Removed object "+object.id +" at post "+object.position.coords);
 };
 
 Universe.prototype.getObjectByCoords = function(coords) {
