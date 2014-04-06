@@ -207,11 +207,10 @@ Universe.prototype.compute = function() {
 };
 
 Universe.prototype.draw = function(canvas) {
-
+    canvas.clearRect(0,0,canvas.width,canvas.height);
     for (var i = 0; i < this.objects.length; i++) {
 	this.objects[i].draw(canvas);
-    }
-    ;
+    };
 };
 
 Universe.prototype.addObject = function(object) {

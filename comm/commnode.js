@@ -225,9 +225,9 @@ CommSignal.prototype.compute = function(medium) {
     /* update graphics */
     this.shape.radius = this.totalDistanceTraveled;
     
-    this.shape.strokeColor = '#'
-	+ ('000000' + ((0xff0000 + 0x000101 * this.totalDistanceTraveled / dd ) | 0).toString(16))
-		.substr(-6);
+//    this.shape.strokeColor = '#'
+//	+ ('000000' + ((0xff0000 + 0x000101 * this.totalDistanceTraveled / dd ) | 0).toString(16))
+//		.substr(-6);
 
 };
 

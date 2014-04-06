@@ -1,6 +1,6 @@
 var medium = new CommMedium();
-medium.powerDecayRatePerUnit = 0.01;
-medium.propagationSpeed = 100; // pixels per second
+medium.powerDecayRatePerUnit = 0.07;
+medium.propagationSpeed = 700; // pixels per second
 
 var protocol = new CommProtocol();
 

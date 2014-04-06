@@ -10,7 +10,8 @@
 	<script>
 	var c = document.getElementById("commSimCanvas");
 	var ctx = c.getContext("2d");
-
+	ctx.width=1000;
+	ctx.height=700;
 	var simulator = new Simulator(medium,ctx);
 
 	setInterval(function(){
