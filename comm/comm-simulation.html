@@ -1,6 +1,17 @@
 <html>
+<head>
+<style>
+#commSimCanvas {
+position:fixed;
+left:200px;
+}
+</style>
+
+</head>
 
 <body>
+
+	<script src="util.js"></script>
 	<script src="particle.js"></script>
 	<script src="commnode.js"></script>
 	<script src="comm-simulator.js"></script>
@@ -10,13 +21,29 @@
 	<script>
 	var c = document.getElementById("commSimCanvas");
 	var ctx = c.getContext("2d");
+	
 	ctx.width=1000;
 	ctx.height=700;
-	var simulator = new Simulator(medium,ctx);
+// 	var simulator = new Simulator(medium,ctx);
 
-	setInterval(function(){
-	    simulator.run();
-	},20);
+// 	setInterval(function(){
+// 	    simulator.run();
+// 	},20);
+
+	medium.init(c);
+	medium.start(20);
+	
+	c.addEventListener('mousedown',function(e){
+	    var rect = c.getBoundingClientRect();
+	    var relX = e.clientX - rect.left;
+	    var relY = e.clientY - rect.top;
+	    console.log("hit("+relX+","+relY+")->"+medium.getHitObject(relX,relY).id);
+	});
+
+// 	c.onmousedown=function(e){
+// 	    console.log("hit("+e.x+","+e.y+")->"+medium.getHitObject(e.x,e.y));
+// 	}
+	
 	</script>
 </body>
 

@@ -11,8 +11,10 @@ function CommNode(id, transceiver, protocol) {
     /** id of the node */
     this.id = id;
 
-    /** a map of peers indexed by their id */
-    this.peers = {};
+    /**
+     * The data protocol manager
+     */
+    this.manager = new CommNodeManager(this);
 
     /**
      * The transceiver that intermediates the communication
@@ -27,36 +29,36 @@ function CommNode(id, transceiver, protocol) {
     /* register itself as a listener to the transceiver */
     this.transceiver.registerListener(this);
 
+    /* graphics stuff */
+
     /**
      * add the transceiver as a physical part of the comm node
      */
     this.addPart(this.transceiver);
 
-    this.shape = new Rectangle(10, 10);
+    this.shape = new Circle(15,'#000000',"#ffffff");
 
 };
 
 CommNode.prototype = new PhysicalObject();
 CommNode.prototype.constructor = CommNode;
 
-/** a function to discover peers */
-CommNode.prototype.discover = function() {
-
-};
-
-/** a function called when a peer replied to a discovery call */
-CommNode.prototype.onDiscovery = function(peer) {
-
+/**
+ * Main node loop
+ */
+CommNode.prototype.compute = function(universe) {
+    this.manager.loop();
 };
 
 /** a function to handle a message received */
 CommNode.prototype.onMessage = function(message) {
-    console.log(this.id + " <- " + message.body);
+    console.log(this.id + " <- " + JSON.stringify(message));
+    this.manager.handleMessage(message);
 };
 
 /** a function to send a message to a peer */
 CommNode.prototype.sendMessage = function(message) {
-    console.log(this.id + " -> " + message.body);
+    console.log(this.id + " -> " + JSON.stringify(message));
     this.transceiver.transmit(this.protocol.encodeMessage(message));
 };
 
@@ -67,6 +69,200 @@ CommNode.prototype.sendMessage = function(message) {
  */
 CommNode.prototype.receive = function(signal) {
     this.onMessage(this.protocol.decodeSignal(signal));
+};
+
+
+CommNode.prototype.draw = function(canvas){
+    PhysicalObject.prototype.draw.apply(this, arguments);
+    var coords = this.position.coords;
+    canvas.fillStyle='#000000';
+    canvas.fillText(this.id,coords[0]-9,coords[1]+3);
+};
+
+
+/**
+ * A data communication protocol implementation
+ */
+function CommNodeManager(node) {
+    /**
+     * reference to comm node
+     */
+    this.node = node;
+
+    /** a map of peers indexed by their id */
+    this.peers = {};
+    
+    /**
+     * Messages queued to be processed
+     */
+    this.pendingMessages=[];
+
+    /**
+     * When the last hi was sent
+     */
+    this.lastHiSentTimestamp = 0;
+    /**
+     * The wait duration before sending a hi message
+     */
+    this.hiRepeatPeriod = 500000;
+}
+
+CommNodeManager.prototype.constructor = CommNodeManager;
+
+/**
+ * Main control loop
+ */
+CommNodeManager.prototype.loop = function() {
+    var curTimestamp = new Date().getTime();
+    if ((curTimestamp - this.lastHiSentTimestamp) > this.hiRepeatPeriod) {
+	this.lastHiSentTimestamp=curTimestamp;
+	this.discover();
+    }
+    
+    /* process pending messages */
+    
+    while(this.pendingMessages.length > 0){
+	this.processMessage(this.pendingMessages.shift());
+    }
+};
+
+/**
+ * Message handler
+ * 
+ * @param message
+ */
+CommNodeManager.prototype.handleMessage = function(message) {
+    /* basic message validation */
+    if(!message || !message.header || !message.body){
+	return;
+    }
+    this.pendingMessages.push(message);
+    
+};
+
+CommNodeManager.prototype.processMessage=function(message){
+    var type = message.header._t;
+
+    switch (type) {
+    case COMM.MESSAGE.HI:
+	this.onHiReceived(message);
+	break;
+    case COMM.MESSAGE.NTMY:
+	this.onNtmyReceived(message);
+	break;
+
+    default:
+	break;
+    }
+};
+
+
+
+CommNodeManager.prototype.createHiMessage = function(node) {
+    return this.createEmptyMessage(COMM.MESSAGE.HI, node.id);
+};
+
+/**
+ * 
+ * @param type
+ * @param from
+ * @returns {___anonymous3022_3113}
+ */
+CommNodeManager.prototype.createEmptyMessage = function(type, from) {
+    var message = {
+	header : {
+	    _id : createGuid(),
+	    _t : type,
+	    from : from
+	},
+	body : {}
+    };
+
+    return message;
+};
+
+/* Outgoing */
+
+/** a function to discover peers */
+CommNodeManager.prototype.discover = function() {
+    var hiMessage = this.createHiMessage(this.node);
+    this.node.sendMessage(hiMessage);
+};
+
+/* Incoming */
+
+/** a function called when a peer replied to a discovery call */
+CommNodeManager.prototype.onDiscovery = function(peer) {
+
+};
+
+CommNodeManager.prototype.onHiReceived = function(message) {
+    var ntmyMsg = this.createEmptyMessage(COMM.MESSAGE.NTMY, this.node.id);
+    /* reply to the sender */
+    ntmyMsg.header.to = message.header.from;
+    /* set the original message  id */
+    ntmyMsg.header._origid=message.header._id;
+    this.node.sendMessage(ntmyMsg);
+};
+
+CommNodeManager.prototype.onNtmyReceived = function(message) {
+
+};
+
+/**
+ * Global object that holds generic comm data
+ */
+COMM = {
+    /**
+     * types of messages
+     */
+    MESSAGE : {
+	/*
+	 * the introductory message a node sends to present itself to the
+	 * network
+	 */
+	HI : "_hi"
+	/*
+	 * nice to meet you : a message sent by a node when it receives a HI
+	 * message
+	 */
+	,
+	NTMY : "_ntmy"
+
+    }
+};
+
+
+
+/**
+ * A generic communication protocol through a physical medium
+ */
+
+function CommProtocol() {
+
+};
+
+CommProtocol.prototype.constructor = CommProtocol;
+
+
+/**
+ * a function that encodes a message into a signal
+ * 
+ * @param message
+ * @returns {Signal}
+ */
+CommProtocol.prototype.encodeMessage = function(message) {
+    return new CommSignal(message);
+};
+
+/**
+ * a function that decodes a signal into a message
+ * 
+ * @param signal
+ * @returns
+ */
+CommProtocol.prototype.decodeSignal = function(signal) {
+    return signal.data;
 };
 
 /**
@@ -96,12 +292,21 @@ CommPeer.prototype.constructor = CommPeer;
 function Message(header, body) {
     /**
      * The header of the message that contains meta data
+     * Fields: 
+     * _t -> message type
+     * _id -> unique message id
+     * from -> the sender's id
+     * to -> the receiver's id
+     * _origid -> present in a reply message and represents the id of the message to which the current
+     * message replies to
+     * 
      */
     this.header = header;
     /**
      * The actual content of the message
      */
     this.body = body;
+
 };
 
 Message.prototype.constructor = Message;
@@ -166,7 +371,7 @@ CommSignal.prototype.onEmitted = function(emitter) {
  * Compute the propagation of the signal as time goes by
  */
 CommSignal.prototype.compute = function(medium) {
-    
+
     var curTime = new Date().getTime();
 
     /* delta time since last computation in seconds */
@@ -220,45 +425,15 @@ CommSignal.prototype.compute = function(medium) {
     this.totalDistanceTraveled += dd;
     /* set last computation time to current time */
     this.lastComputationTime = curTime;
-    
-    
+
     /* update graphics */
     this.shape.radius = this.totalDistanceTraveled;
-    
-//    this.shape.strokeColor = '#'
-//	+ ('000000' + ((0xff0000 + 0x000101 * this.totalDistanceTraveled / dd ) | 0).toString(16))
-//		.substr(-6);
 
-};
+    // this.shape.strokeColor = '#'
+    // + ('000000' + ((0xff0000 + 0x000101 * this.totalDistanceTraveled / dd ) |
+    // 0).toString(16))
+    // .substr(-6);
 
-/**
- * A generic, high level, mesh communication protocol definition
- */
-
-function CommProtocol() {
-
-};
-
-CommProtocol.prototype.constructor = CommProtocol;
-
-/**
- * a function that encodes a message into a signal
- * 
- * @param message
- * @returns {Signal}
- */
-CommProtocol.prototype.encodeMessage = function(message) {
-    return new CommSignal(message);
-};
-
-/**
- * a function that decodes a signal into a message
- * 
- * @param signal
- * @returns
- */
-CommProtocol.prototype.decodeSignal = function(signal) {
-    return signal.data;
 };
 
 /**
@@ -307,8 +482,7 @@ Transceiver.prototype.transmit = function(signal) {
     signal.sourcePosition = this.position;
     signal.position = this.position;
     /* propagate the signal through the comm medium ( universe ) */
-//    this.universe.propagate(signal);
-    
+    // this.universe.propagate(signal);
     /* add the signal to the medium */
     signal.onEmitted(this);
     this.universe.addObject(signal);
@@ -366,7 +540,6 @@ function CommMedium() {
  */
 CommMedium.prototype = new Universe();
 CommMedium.prototype.constructor = CommMedium;
-
 
 /**
  * A function to simulate the propagation of a signal through a communication

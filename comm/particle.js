@@ -53,15 +53,25 @@ Rectangle.prototype.constructor = Rectangle;
 Rectangle.prototype.draw = function(canvas, position) {
     var coords = position.coords;
 
-    canvas.fillRect(coords[0] - this.width/2, coords[1] - this.height/2,
+    canvas.fillRect(coords[0] - this.width / 2, coords[1] - this.height / 2,
 	    this.width, this.height);
 };
 
-function Circle(radius) {
+Rectangle.prototype.hitTest=function(pos,mouseX,mouseY){
+    
+};
+
+function Circle(radius, strokeColor, fillColor) {
     Shape.call(this);
     this.radius = radius;
     this.fillColor;
+    if (fillColor) {
+	this.fillColor = fillColor;
+    }
     this.strokeColor = '#ff0000';
+    if (strokeColor) {
+	this.strokeColor = strokeColor;
+    }
 
 }
 
@@ -80,7 +90,14 @@ Circle.prototype.draw = function(canvas, position) {
 	canvas.strokeStyle = this.strokeColor;
 	canvas.stroke();
     }
-//    console.log("draw circle "+this.radius);
+    // console.log("draw circle "+this.radius);
+};
+
+Circle.prototype.hitTest=function(pos,mouseX,mouseY){
+    if(pos.distance(new Point([mouseX,mouseY])) <= this.radius){
+	return true;
+    }
+    return false;
 };
 
 function CustomShape(points) {
@@ -157,7 +174,6 @@ PhysicalObject.prototype.onDettach = function() {
 
 };
 
-
 /* override this for specific behavior */
 PhysicalObject.prototype.compute = function(universe) {
 };
@@ -191,11 +207,48 @@ PhysicalObject.prototype.removePart = function(part) {
     delete this.parts[part.id];
 };
 
-function Universe(dimensions) {
+PhysicalObject.prototype.hitTest = function(mouseX,mouseY){
+    if(!this.shape){
+	return false;
+    }
+    return this.shape.hitTest(this.position,mouseX,mouseY);
+};
+
+
+
+function Universe(dimensions, canvasElem) {
+    this.canvasElem;
+    this.canvas;
     this.dimensions = dimensions;
     this.objects = new Array();
     this.pointsObjects = new Object();
-    this.objectsIndex=0;
+    this.objectsIndex = 0;
+    this.intervalId;
+    
+    this.init(canvasElem);
+}
+
+Universe.prototype.init = function(canvasElem) {
+    if(canvasElem){
+        this.canvasElem = canvasElem;
+        this.canvas = canvasElem.getContext("2d");
+    }
+};
+
+Universe.prototype.start = function(frequency) {
+    var self = this;
+    this.intervalId = setInterval(function() {
+	self.compute();
+	self.draw(self.canvas);
+    }, frequency);
+};
+
+Universe.prototype.stop=function()
+{
+    if (this.intervalId) {
+	clearInterval(this.intervalId);
+	delete this.intervalId;
+    }
 }
 
 Universe.prototype.compute = function() {
@@ -207,14 +260,15 @@ Universe.prototype.compute = function() {
 };
 
 Universe.prototype.draw = function(canvas) {
-    canvas.clearRect(0,0,canvas.width,canvas.height);
+    canvas.clearRect(0, 0, canvas.width, canvas.height);
     for (var i = 0; i < this.objects.length; i++) {
 	this.objects[i].draw(canvas);
-    };
+    }
+    ;
 };
 
 Universe.prototype.addObject = function(object) {
-    this.objectsIndex+=1;
+    this.objectsIndex += 1;
     if (!object.id) {
 	object.id = "PhysObj-" + (this.objectsIndex);
     }
@@ -235,11 +289,21 @@ Universe.prototype.removeObject = function(object) {
     this.objects.splice(objIndex, 1);
     delete this.pointsObjects[object.position.coords];
     object.onDettach(this);
-    console.log("Removed object "+object.id +" at post "+object.position.coords);
+    console.log("Removed object " + object.id + " at post "
+	    + object.position.coords);
 };
 
 Universe.prototype.getObjectByCoords = function(coords) {
     return this.pointsObjects[coords];
+};
+
+Universe.prototype.getHitObject=function(mouseX,mouseY){
+    for (var i = 0; i < this.objects.length; i++) {
+	var hit = this.objects[i].hitTest(mouseX,mouseY);
+	if(hit){
+	return this.objects[i];
+	}
+    }
 };
 
 function Simulator(universe, canvas) {
