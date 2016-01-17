@@ -1,0 +1,39 @@
+<html>
+<head>
+<style>
+#commSimCanvas {
+position:fixed;
+left:200px;
+}
+</style>
+
+</head>
+
+<body>
+
+	<script src="../core/util.js"></script>
+	<script src="../core/particle.js"></script>
+	<script src="pcb.js"></script>
+	<script src="devices.js"></script>
+	<script src="components.js"></script>
+	<script src="pcb-simulator.js"></script>
+	<canvas id="commSimCanvas" width="1000" height="700"></canvas>
+
+
+	<script>
+	var c = document.getElementById("commSimCanvas");
+	var ctx = c.getContext("2d");
+	
+	ctx.width=1000;
+	ctx.height=700;
+
+
+	universe.init(c);
+	universe.start(20);
+	
+
+	
+	</script>
+</body>
+
+</html>

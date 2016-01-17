@@ -33,12 +33,33 @@ left:200px;
 	medium.init(c);
 	medium.start(20);
 	
-	c.addEventListener('mousedown',function(e){
-	    var rect = c.getBoundingClientRect();
-	    var relX = e.clientX - rect.left;
-	    var relY = e.clientY - rect.top;
-	    console.log("hit("+relX+","+relY+")->"+medium.getHitObject(relX,relY).id);
-	});
+// 	c.addEventListener('mousedown',function(e){
+// 	    var relMousePos = medium.getRelMousePos(e.clientX, e.clientY);
+// 	    var relX = relMousePos.mouseX;
+// 	    var relY = relMousePos.mouseY;
+	    
+// 	    var hitObj = medium.getHitObject(relX,relY);
+	    
+// 	    if(hitObj){
+// 	    	console.log("hit("+relX+","+relY+")->"+hitObj.id);
+// 	    	var onMouseMove = function(e){
+// 	    	    console.log("move: "+e);
+// 	    	    var newMousePos = medium.getRelMousePos(e.clientX, e.clientY);
+// 	    	    hitObj.setPosition(newMousePos.mouseX,newMousePos.mouseY);
+// 	    	};
+	    	
+// 	    	var onMouseUp=function(e){
+// 	    	    c.removeEventListener('mousemove',onMouseMove);
+// 	    	    c.removeEventListener('mouseup',onMouseUp);
+// 	    	    console.log("up");
+// 	    	}
+	    	
+// 	    	c.addEventListener('mousemove',onMouseMove);
+// 	    	c.addEventListener('mouseup',onMouseUp);
+	    	
+// 	    }
+	    
+// 	});
 
 // 	c.onmousedown=function(e){
 // 	    console.log("hit("+e.x+","+e.y+")->"+medium.getHitObject(e.x,e.y));

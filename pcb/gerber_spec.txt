@@ -1,0 +1,235 @@
+Concepts
+
+Graphic Object - an image in a plane, has a shape, size, position, polarity ( dark or clear )!!
+
+Draw - straight line with a thickness ( depends on the aperture )
+
+Arc - circular segment - stroked only with a circle aperture
+
+Flash - a replication of a previous defined aperture at a given location
+
+Region - An area defined by its contour - constructed with a sequence of linear and circular segments
+
+Note: A track is a generic name for a graphics object that can either be a draw or an arc.
+In PCB copper layers, draws and arcs are used to create conductive tracks, flashes to create
+pads and regions to create copper areas (also called copper pours).
+
+
+
+Aperture - a 2D geometric shape (ex: a circle with diameter of 2mm ) - used for flashing or stroking 
+
+
+	Two types of apertures - standard and macro
+	
+	- Standard apertures are pre-defined: the circle (C), rectangle (R), obround (O) and regular
+	polygon (P) (see 4.12).
+	- Macro apertures are defined by means of AM (Aperture Macro) command. Any shape and
+	parametrization can be created. They are identified by their given name. (See 4.13). 
+	
+	
+	An aperture has an origin. When an aperture is flashed its origin is positioned at the
+	coordinates in the D03 flash command (see 4.2). The origin of a standard aperture is its
+	geometric center. The origin of a macro aperture is the origin used in the AM command defining
+	the macro aperture.
+	
+	
+	Note: The AM and AD commands can be compared with object-oriented programming
+	(OOP): AM command defines a macro aperture (similar to defining a class in OOP), and AD
+	command instantiates either a macro or a standard aperture and assigns a code to it (similar to
+	instantiating an object of either a class or a built-in type and give it some name in OOP)
+	
+	
+	!!!! - The solid circle and the solid rectangle standard apertures are the only apertures allowed for
+	creating draw objects. Neither other standard apertures nor any macro apertures can be used to
+	create a draw, even if their effective shape is circle or a rectangle.
+	
+	A draw is created with D01 command in linear interpolation mode
+	An arc is created with D01 command in circular interpolation mode
+	
+	!! - An arc object cannot be created using a rectangle or any other aperture.
+	
+	! - A circle aperture of zero diameter (zero-size aperture) can be used for creating a draw or an
+	arc. It creates graphics objects without image which can be used to transfer non-image
+	information, e.g. an outline.
+	
+	Zero-length draws and arcs are allowed. The resulting image is a replica of the aperture. This is
+	also the limiting image of a draw/arc when the draw/arc length approaches zero. Thus the
+	image is what is expected if a small draw/arc is accidentally rounded to a zero-length draw/arc.
+	Although the image is coincidentally identical to a flash of the same aperture the resulting
+	graphics object is not a flash but a draw/arc.
+	
+	Note: Do not use zero-length draws to represent pads as pads must be represented by
+	flashes.
+	
+	
+	
+Contours - Contours are used to create regions (see 4.6) and outline primitives in macro apertures (see 4.13.4.5).	
+	- a sequence of connected linear or circular segments
+	
+	!! -A pair of segments is said to
+	connect only if they are defined consecutively, with the second segment starting where the first
+	one ends. Thus the order in which the segments of a contour are defined is significant. Nonconsecutive
+	segments that meet or intersect fortuitously are not considered to connect.
+	
+	!! - A contour is closed: the end point of the last segment must connect to the start point of the first segment.
+	
+	In Gerber format self-intersecting contours are not allowed. Segments cannot cross, overlap or
+	touch except:
+	- Consecutive segments connecting in their endpoints, needed to construct the contour
+	- Horizontal or vertical fully coincident linear segments, used to create holes in a region with
+	cut-ins; see 4.6.11. A pair of linear segments are said to be fully coincident if and only if the
+	segments coincide completely, with the second segment starting where the first one ends.
+	- Zero-length linear and circular segments are allowe
+	
+	
+Operation Codes
+
+	D01, D02 and D03 are the operation codes. An operation contains the coordinate data followed
+	by a single operation code: each operation code is associated with a single coordinate pair and
+	vice versa. Operations create the graphics objects and/or change the current point by operating
+	on the coordinate data.
+	
+	Example:
+	X100Y100D01*
+	X200Y200D02*
+	X300Y-400D03*
+	
+	
+	
+Graphics State
+
+	A Gerber file defines a graphics state after each command. The graphics state is represented
+	by the set of parameters; their values at each moment define the effect of the upcoming
+	operation codes (see 2.7). A graphics state parameter that affects an operation code must be
+	defined before the operation code is issued.
+	
+	The most important graphics state parameter is the current point. The current point is a point in
+	the image plane that is explicitly (D02) or implicitly (D01, D03) set by any operation: after
+	performing an operation the current point is set to the coordinates in that operation.
+	All other graphics state parameters are set explicitly by corresponding commands. Their values
+	remain constant until explicitly changed.
+	
+	
+	
+	
+Parameters 
+	- Coordinate format - See FS command in 4.9 - Fixed - Undefined	
+	- Unit - Inch or mm See MO command in 4.10 -  Fixed - Undefined
+	- Current aperture - Standard or macro aperture - See AD in 4.11 and AM in 4.13 - Changeable - Undefined
+	- Quadrant mode - Single-, multi-quadrant - See G74/G75 commands in 4.5 - Changeable - Undefined
+	- Interpolation mode - Linear, clockwise circular, counterclockwise circular See G01/G02/G03 commands in 4.4 and 4.5 - Changeable - Undefined
+	- Current point - Point in plane - Changeable - (0,0)
+	- Step & Repeat - See SR command - Changeable  - 1,1,-,-
+	- Level polarity - Dark, clear - See LP command in 4.14 -Changeable - Dark
+	- Region mode - On/Off - See G36, G37 commands in 4.6 - Changeable - Off
+	
+	
+	!! If a parameter is undefined when it is required to perform an operation the Gerber file is invalid
+	
+	
+	Graphics state parameter                            	Operation codes
+				D01 		D02 	D03
+	Coordinate format 		Yes 		Yes 	Yes
+	Unit 			Yes 		Yes 	Yes
+	Current aperture 	Yes if Region mode off  
+			No if Region mode on		No 	Yes
+	
+	Quadrant mode 		Yes if interpolation
+			mode is clockwise or
+			counterclockwise
+			circular interpolation
+			No if interpolation mode
+			is linear			No 	No
+	Interpolation mode 		Yes 		No 	No
+	Current point 			Yes (interpolation
+				starting point)	No 	No
+	Step & Repeat 			Yes 		Yes 	Yes
+	Level polarity 		Yes 		No 	Yes
+	
+	
+	
+	Region mode 			Yes 	Yes. In region mode
+					D02 has the side effect
+					of closing the current
+					contour		Not used by the operation
+							if region mode is off
+							Not allowed if region
+							mode is on
+
+
+Dark and Clear Polarity
+
+	The final image of the Gerber file is created by superimposing the objects in the order of their
+	creation. Objects have a polarity, either clear or dark. Objects can overlap. A dark polarity object
+	darkens its image in the plane. A clear polarity object clears its image in all the lower levels.
+	Subsequent dark objects may again darken the cleared area. See illustration below. Another
+	example is in 4.6.10.
+	
+	
+	!! A Gerber file consists of a sequence of levels. Syntactically a level is a set of consecutive
+	commands in the command stream. For image generation a level is a sequence of graphics
+	objects with the same polarity. An image described by a Gerber file can be viewed as a
+	sequence of levels superimposed in the order of appearance in the file.
+
+	The LP command starts a new level and sets its polarity (see 4.15).
+	
+	
+Attributes
+
+	Attributes add meta-information to a Gerber file. These are akin to labels providing additional
+	information about the file or features within them. Examples of such meta-information conveyed
+	by attributes are:
+	- The function of the file: the file is the top solder mask, or the bottom copper layer etc.
+	- The part represented by the file: the file represents a single PCB, an array, or a coupon
+	- The function of a pad: the flash is an SMD pad, or a via pad, or a fiducial, etc
+	
+	
+	The command below defines an attribute indicating that the file represents the top solder mask.
+	
+	Example:
+	%TF.FileFunction,Soldermask,Top*%
+	
+	
+	Attributes can be associated with either the file as a whole or with individual apertures. 
+
+Commands
+
+M02 - stop generation / end all
+
+G04 - comment
+
+AD - aperture define - creates (i.e. instantiates) an aperture template - It also assigns the D code or aperture number to identify the aperture for
+later use in the stream of commands.
+
+
+Ex:
+
+%ADD10C,0.01*% Define the aperture: D10 is a circle with diameter 0.01 inch
+%ADD11C,0.06*% Define the aperture: D11 is a circle with diameter 0.06 inch
+%ADD12R,0.06X0.06*% Define the aperture: D12 is a rectangle with size 0.06 x 0.06
+inch
+%ADD13R,0.04X0.100*% Define the aperture: D13 is a rectangle with size 0.04 x 0.1
+inch
+%ADD14R,0.100X0.04*% Define the aperture: D14 is a rectangle with size 0.1 x 0.04
+inch
+%ADD15O,0.04X0.100*% Define the aperture: D15 is an obround with size 0.04 x 0.1
+inch
+%ADD16P,0.100X3*% Define the aperture: D16 is a polygon with 3 vertices and
+circumscribed circle with diameter 0.1 inch
+
+AM - aperture macro
+
+Ex : 
+%AMTARGET125* Define the aperture macro ‘TARGET125’
+
+D02 - D02 moves the current point (see 2.8) to the coordinate pair. No graphics object is created. 
+
+D01 - D01 creates a straight or circular line segment by interpolating from the current point to the
+	coordinate pair. When region mode (see 2.8) is off these segments are converted to draw
+	or arc objects by stroking them with the current aperture (see 2.5). When region mode is on
+	these segments form a contour defining a region (see 4.6).
+	
+D03 - D03 creates a flash object by replicating (flashing) the current aperture with the origin
+	positioned at the specified coordinate pair.
+	Only D01 and D03 operation codes result in a graph
+

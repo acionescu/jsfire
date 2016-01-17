@@ -34,54 +34,80 @@ Point.prototype.add = function(point) {
     return new Point(nc);
 };
 
-function Shape() {
+Point.prototype.subtract = function(point){
+    this.checkPointDimension(point);
+    
+    var nc = [];
 
+    for (var i = 0; i < this.coords.length; i++) {
+	nc[i] = this.coords[i] - point.coords[i];
+    }
+
+    return new Point(nc);
+};
+
+/**
+ * 
+ * @param drot - delta rotation in radians
+ */
+Point.prototype.rotate2D = function(drot){
+    var newCoord = [0,0];
+    
+    var rotcos = Math.cos(drot);
+    var rotsin = Math.sin(drot);
+    
+    newCoord[0] = this.coords[0]*rotcos - this.coords[1]*rotsin;
+    newCoord[1] = this.coords[0]*rotsin + this.coords[1]*rotcos;
+    
+    this.coords = newCoord;
+};
+
+function Shape(strokeColor, fillColor) {
+    this.fillColor;
+    if (fillColor) {
+	this.fillColor = fillColor;
+    }
+    this.strokeColor = '#000000';
+    if (strokeColor) {
+	this.strokeColor = strokeColor;
+    }
+    /* store the last absolute position where it was drawn, including scaling */
+    this.absolutePos;
 }
 
 Shape.prototype.constructor = Shape;
 Shape.prototype.draw = function(canvas, position) {
 };
 
-function Rectangle(w, h) {
-    Shape.call(this);
+Shape.prototype.hitTest = function(pos, mouseX, mouseY) {
+    return false;
+};
+
+
+function Rectangle(w, h,strokeColor, fillColor) {
+    Shape.call(this,strokeColor, fillColor);
     this.width = w;
     this.height = h;
 }
 
 Rectangle.prototype = new Shape();
 Rectangle.prototype.constructor = Rectangle;
-Rectangle.prototype.draw = function(canvas, position) {
+Rectangle.prototype.draw = function(canvas, position, scale, rotation) {
     var coords = position.coords;
-
-    canvas.fillRect(coords[0] - this.width / 2, coords[1] - this.height / 2,
-	    this.width, this.height);
-};
-
-Rectangle.prototype.hitTest = function(pos, mouseX, mouseY) {
-
-};
-
-function Circle(radius, strokeColor, fillColor) {
-    Shape.call(this);
-    this.radius = radius;
-    this.fillColor;
-    if (fillColor) {
-	this.fillColor = fillColor;
+    
+    var w = this.width;
+    var h = this.height;
+    
+    if(rotation != 0 && rotation % (Math.PI/2) == 0){
+	w = this.height;
+	h = this.width;
     }
-    this.strokeColor = '#ff0000';
-    if (strokeColor) {
-	this.strokeColor = strokeColor;
-    }
-
-}
-
-Circle.prototype = new Shape();
-Circle.prototype.constructor = Circle;
-
-Circle.prototype.draw = function(canvas, position) {
-    var coords = position.coords;
+    
     canvas.beginPath();
-    canvas.arc(coords[0], coords[1], this.radius, 0, 2 * Math.PI, false);
+    
+    canvas.rect(scale[0]*(coords[0] - w / 2), scale[1]*(coords[1] - h/ 2),
+	    scale[0]*w, scale[1]*h);
+    
     if (this.fillColor) {
 	canvas.fillStyle = this.fillColor;
 	canvas.fill();
@@ -90,19 +116,76 @@ Circle.prototype.draw = function(canvas, position) {
 	canvas.strokeStyle = this.strokeColor;
 	canvas.stroke();
     }
+};
+
+Rectangle.prototype.hitTest = function(pos, mouseX, mouseY) {
+
+};
+
+function Ellipse(radX,radY, strokeColor, fillColor){
+    Shape.call(this,strokeColor, fillColor);
+    this.radX = radX;
+    this.radY = radY;
+    
+    /* absolute radius after scaling */
+    this.absoluteXRadius;
+    this.absoluteYRadius;
+}
+
+Ellipse.prototype = new Shape();
+Ellipse.prototype.constructor = Ellipse;
+
+
+Ellipse.prototype.draw = function(canvas, position, scale,rotation) {
+    var coords = position.coords;
+ 
+    canvas.beginPath();
+    
+    this.absolutePos = new Point([scale[0]*coords[0],scale[1]*coords[1]]);
+    this.absoluteXRadius = this.radX*scale[0];
+    this.absoluteYRadius = this.radY*scale[1];
+    
+    canvas.ellipse(this.absolutePos.coords[0], this.absolutePos.coords[1], this.absoluteXRadius, this.absoluteYRadius,rotation, 0, 2 * Math.PI, false);
+    if (this.fillColor) {
+	canvas.fillStyle = this.fillColor;
+	canvas.fill();
+    }
+    
+    if (this.strokeColor) {
+	canvas.strokeStyle = this.strokeColor;
+	canvas.stroke();
+    }
+   
     // console.log("draw circle "+this.radius);
 };
 
-Circle.prototype.hitTest = function(pos, mouseX, mouseY) {
-    if (pos.distance(new Point([ mouseX, mouseY ])) <= this.radius) {
-	return true;
-    }
-    return false;
+Ellipse.prototype.hitTest = function(pos, mouseX, mouseY) {
+//    if (pos.distance(new Point([ mouseX, mouseY ])) <= this.radius) {
+//	return true;
+//    }
+    
+    var pt = new Point([ mouseX, mouseY ]).subtract(this.absolutePos);
+    
+    return ( (Math.pow(pt.coords[0]/this.absoluteXRadius, 2) + Math.pow(pt.coords[1]/this.absoluteYRadius,2)) < 1);
+    
+  //  return false;
 };
 
+function Circle(radius, strokeColor, fillColor) {
+    Ellipse.call(this,radius,radius,strokeColor, fillColor);
+    this.radius = radius;
+    
+}
+
+Circle.prototype = new Ellipse();
+Circle.prototype.constructor = Circle;
+
+
+
 function CustomShape(points) {
-    this.points = points;
     Shape.call(this);
+    
+    this.points = points;
 }
 
 CustomShape.prototype = new Shape();
@@ -116,17 +199,28 @@ function PhysicalObject(position, shape, mass) {
     this.mass = mass;
     this.position = position;
     
-    /* an object to store view data for this object */
-    this.view ={};
-    
+    /* how much to scale this object on each axis */
+    this.scale = [1,1];
     /**
      * Relative position to the parent
      */
     this.relPos;
+    
+    /* rotation of the object in radians */
+    this.rotation=0;
+    
+    /* an object to store view data */
+    this.view = {};
 
     this.partsMap = {};
 
     this.parts = new Array();
+    /* the parent object of the current one */
+    this.parent;
+    
+    if(!this.position){
+	this.position = new Point([0,0]);
+    }
 
 };
 
@@ -146,22 +240,72 @@ PhysicalObject.prototype.onAttach = function(universe) {
 
     /* now we're sure that all parts have an id */
     this.indexParts();
+    
+    /* allow specific object to do theri initialization */
+    this.onReady();
 };
 
-PhysicalObject.prototype.setPosition=function(newPos){
-    this.setPosition(newPos.x,newPos.y);
+/* Called after the object has been attached to a universe. Override as needed */
+PhysicalObject.prototype.onReady = function(){
+    
+    
 };
 
 PhysicalObject.prototype.setPosition=function(x,y){
     this.position=new Point([x,y]);
-    this.update();
+    this.updatePosition();
 };
 
-PhysicalObject.prototype.update = function(){
+PhysicalObject.prototype.setRelativePos=function(x,y){
+    this.relPos = new Point([x,y]);
+    if(!!this.parent){
+	this.parent.determinePartPosition(this);
+    }
+   
+    
+    this.updatePosition();
+};
+
+PhysicalObject.prototype.setScale = function(scale){
+    this.scale = scale;
+    this.updateScale();
+};
+
+PhysicalObject.prototype.setRotation=function(rot){
+    this.rotation = rot % (2*Math.PI);
+};
+
+/**
+ * drot - rotation delta in radians
+ */
+PhysicalObject.prototype.rotate=function(drot){
+    this.setRotation(this.rotation+drot);
+    
+    /* update parts scale */
+    this.parts.forEach(function(part) {
+	
+	/* update part relative postion */
+	part.relPos.rotate2D(drot);
+	/* update part absolute position */
+	this.determinePartPosition(part);
+	/* let the part rotate its inner parts */
+	part.rotate(-drot);
+	
+    }, this);
+};
+
+PhysicalObject.prototype.updatePosition = function(){
     
     /* update parts positions */
     this.parts.forEach(function(part) {
 	this.determinePartPosition(part);
+    }, this);
+};
+
+PhysicalObject.prototype.updateScale= function(){
+    /* update parts scale */
+    this.parts.forEach(function(part) {
+	part.setScale ([part.scale[0]*this.scale[0],part.scale[1]*this.scale[1]]);
     }, this);
 };
 
@@ -171,12 +315,16 @@ PhysicalObject.prototype.update = function(){
  * @param part
  */
 PhysicalObject.prototype.determinePartPosition = function(part) {
-    var pPos = new Point(this.position.coords.slice());
+    if(this.position == undefined){
+	throw "positiond undefined for part "+part.id;
+    }
+    var pPos = new Point(this.position.coords.slice(0));
     if (part.relPos) {
 	pPos = pPos.add(part.relPos);
     }
 
-    part.position = pPos;
+    //part.position = pPos;
+    part.setPosition(pPos.coords[0], pPos.coords[1]);
 };
 
 /**
@@ -201,7 +349,7 @@ PhysicalObject.prototype.compute = function(universe) {
 
 PhysicalObject.prototype.draw = function(canvas) {
     if (this.shape) {
-	this.shape.draw(canvas, this.position);
+	this.shape.draw(canvas, this.position, this.scale,this.rotation);
     }
 };
 
@@ -213,14 +361,28 @@ PhysicalObject.prototype.draw = function(canvas) {
  *                relative position of the part to the parent
  */
 PhysicalObject.prototype.addPart = function(part, relPos) {
-    if (!part.id) {
+    /* add the part to the universe if not added yet */
+    if (!part.id && !!this.universe) {
+	this.universe.addObject(part);
 	this.partsMap[part.id] = part;
     }
+    
     /* if the part doesn't have a position, copy the position of the parent */
-    if (!relPos) {
+    if (!!relPos) {
 	part.relpos = relPos;
     }
+    
+    /* adjust part scale */
+    if(!part.scale){
+	throw "scale undefined";
+    }
+    
+    part.setScale([part.scale[0]*this.scale[0],part.scale[1]*this.scale[1]]);
+    
+    this.determinePartPosition(part);
+    
     this.parts.push(part);
+    part.parent = this;
 
 };
 
@@ -263,6 +425,7 @@ Universe.prototype.setupListeners=function(){
     }
     var self=this;
     c.addEventListener('mousedown',function(e){
+	
 	    var relMousePos = self.getRelMousePos(e.clientX, e.clientY);
 	    var relX = relMousePos.mouseX;
 	    var relY = relMousePos.mouseY;

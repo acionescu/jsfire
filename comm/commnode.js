@@ -52,13 +52,13 @@ CommNode.prototype.compute = function(universe) {
 
 /** a function to handle a message received */
 CommNode.prototype.onMessage = function(message) {
-    console.log(this.id + " <- " + JSON.stringify(message));
+//    console.log(this.id + " <- " + JSON.stringify(message));
     this.manager.handleMessage(message);
 };
 
 /** a function to send a message to a peer */
 CommNode.prototype.sendMessage = function(message) {
-    console.log(this.id + " -> " + JSON.stringify(message));
+//    console.log(this.id + " -> " + JSON.stringify(message));
     this.transceiver.transmit(this.protocol.encodeMessage(message));
 };
 
@@ -104,7 +104,17 @@ function CommNodeManager(node) {
     /**
      * The wait duration before sending a hi message
      */
-    this.hiRepeatPeriod = 500000;
+    this.hiRepeatPeriod = 10000;
+    
+    /**
+     * Max time to wait for a reply 
+     */
+    this.maxWaitForReply = 5000;
+    
+    /**
+     * a map to hold sent messages
+     */
+    this.sentMsgHistory={};
 }
 
 CommNodeManager.prototype.constructor = CommNodeManager;
@@ -114,16 +124,58 @@ CommNodeManager.prototype.constructor = CommNodeManager;
  */
 CommNodeManager.prototype.loop = function() {
     var curTimestamp = new Date().getTime();
+    /* send discover */
     if ((curTimestamp - this.lastHiSentTimestamp) > this.hiRepeatPeriod) {
 	this.lastHiSentTimestamp=curTimestamp;
 	this.discover();
     }
+    
+    /* cleanup old messages */
+    this.purgeOldSentMessages();
+    
+    /* purge old peers */
+    this.purgeOldPeers();
     
     /* process pending messages */
     
     while(this.pendingMessages.length > 0){
 	this.processMessage(this.pendingMessages.shift());
     }
+    
+
+};
+
+
+CommNodeManager.prototype.purgeOldPeers = function(){
+    /* define the oldest ntmy timestamp expected from the peer */
+    var curTime = new Date().getTime();
+    var oldestNtmyTimestamp = curTime - (this.hiRepeatPeriod+this.maxWaitForReply);
+    for(var p in this.peers){
+	var peer = this.peers[p];
+	if(peer.lastHeardOf < oldestNtmyTimestamp){
+	    delete this.peers[p];
+	    console.log(this.node.id+" purged peer "+p);
+	}
+	
+    }
+};
+
+
+CommNodeManager.prototype.sendMessage=function(message){
+  message.header._time=new Date().getTime();  
+  this.node.sendMessage(message);
+  this.sentMsgHistory[message.header._id]=message;
+};
+
+CommNodeManager.prototype.purgeOldSentMessages=function(){
+  var curTime = new Date().getTime();  
+  for(var i in this.sentMsgHistory){
+      var m = this.sentMsgHistory[i];
+      if( (curTime - m.header._time) > this.maxWaitForReply ){
+//	  console.log(this.node.id+": purging  sent message "+i);
+	  delete this.sentMsgHistory[i];
+      }
+  }  
 };
 
 /**
@@ -186,7 +238,7 @@ CommNodeManager.prototype.createEmptyMessage = function(type, from) {
 /** a function to discover peers */
 CommNodeManager.prototype.discover = function() {
     var hiMessage = this.createHiMessage(this.node);
-    this.node.sendMessage(hiMessage);
+    this.sendMessage(hiMessage);
 };
 
 /* Incoming */
@@ -202,11 +254,46 @@ CommNodeManager.prototype.onHiReceived = function(message) {
     ntmyMsg.header.to = message.header.from;
     /* set the original message  id */
     ntmyMsg.header._origid=message.header._id;
-    this.node.sendMessage(ntmyMsg);
+    this.sendMessage(ntmyMsg);
 };
 
 CommNodeManager.prototype.onNtmyReceived = function(message) {
+    /* check if we find the origin message sent by this node */
+//    console.log("check orig message "+message.header._origid);
+    var origMessage = this.sentMsgHistory[message.header._origid];
+    if(!origMessage){
+//	console.log(this.node.id+" discarding "+message);
+	return;
+    }
+    
+    /* if we found the origin message */
+    
+    if(message.header.to==this.node.id){
+	this.addPeer(message.header.from,message,this.node.id);
+	
+	/* add peers of the peer */
+	var remotePeers=message.body.peers;
+	for(var p in remotePeers){
+	    
+	}
+	
+	
+    }
+};
 
+CommNodeManager.prototype.addPeer=function(nodeId,message,gateway){
+    var peer = this.peers[nodeId];
+    if(!peer){
+	peer = new CommPeer(nodeId);
+	this.peers[nodeId]=peer;
+	console.log(this.node.id +" added peer "+nodeId);
+    }
+    var curTime = new Date().getTime();
+    peer.lastHeardOf=curTime;
+    /* get the route and update/set the delay*/
+    var route=peer.getRoute(gateway, true);
+    route.delay = curTime - message.header._time;
+    
 };
 
 /**
@@ -268,21 +355,58 @@ CommProtocol.prototype.decodeSignal = function(signal) {
 /**
  * Definition of a communication node as seen by another node
  */
-function CommPeer() {
+function CommPeer(peerId) {
     /** id of the peer */
-    this.id;
-
-    /** time necessary to reach the peer node */
-    this.delay;
-
+    this.id=peerId;
+    
     /**
-     * an array of other peers through which a packet needs to pass to reach
-     * this peer
+     * The timestamp of the last message received from this peer
      */
-    this.hops = [];
+    this.lastHeardOf;
+
+    
+    /**
+     * the possible routes to this peer
+     */
+    this.routes={};
+
 }
 
 CommPeer.prototype.constructor = CommPeer;
+
+
+/**
+ * Returns a route for a given gateway. Creates it if it doesn't exist and crete param is true 
+ */
+CommPeer.prototype.getRoute=function(gateway,create){
+    var route = this.routes[gateway];
+    if ( !route && create){
+	route = new CommRoute();
+	this.addRoute(gateway,route);
+    }
+    return route;
+};
+
+CommPeer.prototype.addRoute=function(gateway,route){
+    this.routes[gateway] = route;
+};
+
+
+function CommRoute(){
+    /**
+     * an array of peers through which a packet needs to pass to reach
+     * the target
+     */
+    this.hops = [];
+    
+    this.hopsCount;
+    
+    /** time necessary to reach the peer node */
+    this.delay;
+}
+
+CommRoute.prototype.constructor=CommRoute;
+
 
 /**
  * Definition of a communication message

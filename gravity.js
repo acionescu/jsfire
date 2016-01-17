@@ -173,7 +173,7 @@ CellRule2.prototype.execute = function(cell) {
 	/* add to gravity */
 	var cg = n[i].oldg;
 	gsum += cg;
-	if (n[i].oldState ) {
+	if (n[i].oldState) {
 	    alive++;
 	}
 	if (maxg.g < cg) {
@@ -189,9 +189,8 @@ CellRule2.prototype.execute = function(cell) {
     }
 
     /* apply change rules */
-//     this.dna.change(cell, alive);
-    
-    
+    // this.dna.change(cell, alive);
+
     var avgg = gsum / size;
 
     // if (cell.age > 5 && cell.oldg > 1) {
@@ -209,7 +208,7 @@ CellRule2.prototype.execute = function(cell) {
     // }
     // else if(cell.age > 1 && cell.oldg > 1 && maxg.g < cell.oldg){
     // cell.gravity -=1;
-    //	
+    //    	
     // }
     // else if(cell.oldg < 1 && cell.oldg < avgg ){
     // cell.gravity = (cell.oldg + avgg) * 0.99;
@@ -224,25 +223,22 @@ CellRule2.prototype.execute = function(cell) {
     // cell.state=0;
     // }
 
-
     if (!cell.oldState && ((avgg > 0.3 && cell.oldg > 0.5))) {
 	cell.state = 1;
-    } else if (cell. age > 2 && cell.oldState && (avgg < 0.25 || avgg > 0.4)) {
+    } else if (cell.age > 2 && cell.oldState && (avgg < 0.25 || avgg > 0.4)) {
 	cell.state = 0;
-    } 
-    else if (cell.age > 5 ) {
+    } else if (cell.age > 5) {
 	cell.state = 0;
     }
 
-    cell.gravity = (cell.state + avgg) * 0.9;
+    cell.gravity = (cell.state + avgg) * 0.95;
 
     /* apply spin */
-//     if (this.dna.maskSpin > 0) {
-//     m.unshift(m.pop());
-//     } else {
-//     m.push(m.shift());
-//     }
-    
+    // if (this.dna.maskSpin > 0) {
+    // m.unshift(m.pop());
+    // } else {
+    // m.push(m.shift());
+    // }
     if (cell.state) {
 	cell.age++;
 	// cell.gravity = cell.state;
