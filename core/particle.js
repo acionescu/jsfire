@@ -1,3 +1,17 @@
+var CONSTANTS={
+	half_PI : Math.PI/2,
+	EAST : 0 ,
+	WEST : Math.PI,
+	SOUTH : -Math.PI/2,
+	NORTH : Math.PI/2,
+	SE : -Math.PI/4,
+	SW : -3*Math.PI/4,
+	NE : Math.PI/4,
+	NW : 3*Math.PI/4
+}; 
+
+
+
 function Point(coords) {
     this.coords = coords;
 }
@@ -63,6 +77,11 @@ Point.prototype.rotate2D = function(drot){
 };
 
 function Shape(strokeColor, fillColor) {
+    /**
+     * allow drawing
+     */
+    this.visible = true;
+    
     this.fillColor;
     if (fillColor) {
 	this.fillColor = fillColor;
@@ -98,7 +117,8 @@ Rectangle.prototype.draw = function(canvas, position, scale, rotation) {
     var w = this.width;
     var h = this.height;
     
-    if(rotation != 0 && rotation % (Math.PI/2) == 0){
+    if( Math.abs(rotation) == CONSTANTS.half_PI ){
+	
 	w = this.height;
 	h = this.width;
     }
@@ -119,7 +139,7 @@ Rectangle.prototype.draw = function(canvas, position, scale, rotation) {
 };
 
 Rectangle.prototype.hitTest = function(pos, mouseX, mouseY) {
-
+    
 };
 
 function Ellipse(radX,radY, strokeColor, fillColor){
@@ -146,6 +166,7 @@ Ellipse.prototype.draw = function(canvas, position, scale,rotation) {
     this.absoluteYRadius = this.radY*scale[1];
     
     canvas.ellipse(this.absolutePos.coords[0], this.absolutePos.coords[1], this.absoluteXRadius, this.absoluteYRadius,rotation, 0, 2 * Math.PI, false);
+    
     if (this.fillColor) {
 	canvas.fillStyle = this.fillColor;
 	canvas.fill();
@@ -184,12 +205,46 @@ Circle.prototype.constructor = Circle;
 
 function CustomShape(points) {
     Shape.call(this);
-    
+    this.closed = false;
     this.points = points;
 }
 
 CustomShape.prototype = new Shape();
 CustomShape.prototype.constructor = CustomShape;
+
+
+CustomShape.prototype.draw=function(canvas, position, scale,rotation){
+   
+    
+    if(this.points == undefined || this.points.legth <= 1){
+	return;
+    }
+    
+    canvas.beginPath();
+    
+    var pc = position.coords;
+    
+    canvas.moveTo((pc[0]+this.points[0].coords[0])*scale[0],(pc[1]+this.points[0].coords[1])*scale[1]);
+    
+    for(var i=1;i<this.points.length;i++){
+	canvas.lineTo((pc[0]+this.points[i].coords[0])*scale[0],(pc[1]+this.points[i].coords[1])*scale[1]);
+    }
+    
+    if(this.closed){
+	canvas.closePath();
+    }
+    
+    if (this.fillColor) {
+	canvas.fillStyle = this.fillColor;
+	canvas.fill();
+    }
+    
+    if (this.strokeColor) {
+	canvas.strokeStyle = this.strokeColor;
+	canvas.stroke();
+    }
+};
+
 
 function PhysicalObject(position, shape, mass) {
     this.id;
@@ -204,7 +259,7 @@ function PhysicalObject(position, shape, mass) {
     /**
      * Relative position to the parent
      */
-    this.relPos;
+    this.relPos=new Point([0,0]);
     
     /* rotation of the object in radians */
     this.rotation=0;
@@ -266,6 +321,33 @@ PhysicalObject.prototype.setRelativePos=function(x,y){
     this.updatePosition();
 };
 
+PhysicalObject.prototype.moveRelPos=function(x,y){
+    var newRelPos = this.relPos.add(new Point([x,y]));
+    this.setRelativePos(newRelPos.coords[0],newRelPos.coords[1]);
+    console.log(newRelPos.coords);
+};
+
+PhysicalObject.prototype.move=function(x,y){
+    var newPos = this.position.add(new Point([x,y]));
+    this.setPosition(newPos.coords[0],newPos.coords[1]);
+    
+};
+
+
+/**
+ * Returns the relative pos of this object relative to its ancestor with the specified depth 
+ * ( if depth 0 or unspecified the relative pos to parent will be returned )
+ * @param depth
+ */
+PhysicalObject.prototype.getRelativePos=function(depth){
+    if(depth == undefined || depth <=0){
+	return this.relPos;
+    }
+    
+    return this.parent.getRelativePos(depth-1).add(this.relPos);
+};
+
+
 PhysicalObject.prototype.setScale = function(scale){
     this.scale = scale;
     this.updateScale();
@@ -273,6 +355,9 @@ PhysicalObject.prototype.setScale = function(scale){
 
 PhysicalObject.prototype.setRotation=function(rot){
     this.rotation = rot % (2*Math.PI);
+    if(Math.abs(this.rotation) > Math.PI){
+	this.rotation = this.rotation - Math.sign(this.rotation)*Math.PI;
+    }
 };
 
 /**
@@ -305,7 +390,7 @@ PhysicalObject.prototype.updatePosition = function(){
 PhysicalObject.prototype.updateScale= function(){
     /* update parts scale */
     this.parts.forEach(function(part) {
-	part.setScale ([part.scale[0]*this.scale[0],part.scale[1]*this.scale[1]]);
+	part.setScale ([this.scale[0],this.scale[1]]);
     }, this);
 };
 
@@ -348,7 +433,7 @@ PhysicalObject.prototype.compute = function(universe) {
 };
 
 PhysicalObject.prototype.draw = function(canvas) {
-    if (this.shape) {
+    if (this.shape && this.shape.visible) {
 	this.shape.draw(canvas, this.position, this.scale,this.rotation);
     }
 };
@@ -397,6 +482,22 @@ PhysicalObject.prototype.hitTest = function(mouseX, mouseY) {
     return this.shape.hitTest(this.position, mouseX, mouseY);
 };
 
+/**
+ * 
+ * @param mousePos - a {@link Point} 
+ */
+PhysicalObject.prototype.onDrag = function(mousePos){
+    
+};
+
+/**
+ * 
+ * @param mousePos - a {@link Point} 
+ */
+PhysicalObject.prototype.onClick = function(mousePos){
+    
+};
+
 function Universe(dimensions, canvasElem) {
     this.canvasElem;
     this.canvas;
@@ -434,9 +535,10 @@ Universe.prototype.setupListeners=function(){
 	    
 	    if(hitObj){
 	    	console.log("hit("+relX+","+relY+")->"+hitObj.id);
+	    	hitObj.onDrag(relX,relY);
 	    	var onMouseMove = function(e){
 	    	    var newMousePos = self.getRelMousePos(e.clientX, e.clientY);
-	    	    hitObj.setPosition(newMousePos.mouseX,newMousePos.mouseY);
+	    	    hitObj.onDrag(newMousePos.mouseX,newMousePos.mouseY);
 	    	};
 	    	
 	    	var onMouseUp=function(e){
@@ -469,12 +571,22 @@ Universe.prototype.start = function(frequency) {
     }, frequency);
 };
 
+
+
+
 Universe.prototype.stop = function() {
     if (this.intervalId) {
 	clearInterval(this.intervalId);
 	delete this.intervalId;
     }
-}
+};
+
+
+
+Universe.prototype.update = function(){
+    this.compute();
+    this.draw(this.canvas);
+};
 
 Universe.prototype.compute = function() {
 

@@ -2,8 +2,27 @@
 <head>
 <style>
 #commSimCanvas {
-position:fixed;
-left:200px;
+	/* position:fixed; */
+	/* left:200px; */
+	
+}
+
+#toolSelector {
+	float : right;
+	width : 200px;
+}
+
+#controls {
+	position: fixed;
+	right: 20px;
+	top : 10px;
+	width : 300px;
+	height : 100%;
+	border-left-style: solid; 
+	border-left-width: thin;
+	padding-left: 5px;
+/* 	border-color: black; */
+/* 	float: right; */
 }
 </style>
 
@@ -17,23 +36,30 @@ left:200px;
 	<script src="devices.js"></script>
 	<script src="components.js"></script>
 	<script src="pcb-simulator.js"></script>
+	<script src="controls.js"></script>
 	<canvas id="commSimCanvas" width="1000" height="700"></canvas>
 
-
+	<div id="controls">
+Tool:
+		<select name="Tools" id="toolSelector">
+			<option value="Rotate">Rotate</option>
+			
+		</select>
+	</div>
 	<script>
 	var c = document.getElementById("commSimCanvas");
 	var ctx = c.getContext("2d");
-	
-	ctx.width=1000;
-	ctx.height=700;
 
+	ctx.width = 1000;
+	ctx.height = 700;
+
+	c.onkeydown = onkeydown;
 
 	universe.init(c);
-	universe.start(20);
-	
+	// 	universe.start(20);
 
-	
-	</script>
+	universe.update();
+    </script>
 </body>
 
 </html>

@@ -1,17 +1,4 @@
 
-/**
- * The representation of a possible physical arrangement for an electronic circuit
- */
-function PCB(){
-    
-    PhysicalObject.call(this);
-    /* there are more components in circuit */
-    this.components=[];
-    
-    /* there are more connections in circuit */
-    this.connections=[];
-    
-}
 
 function ElectronicElement(label){
     this.label = label;
@@ -23,6 +10,15 @@ function ElectronicElement(label){
     this.footprint=new Footprint();
 
 }
+
+
+function Footprint(position,shape){
+    PhysicalObject.call(this,position,shape);
+}
+
+Footprint.prototype = new PhysicalObject();
+Footprint.prototype.constructor = Footprint;
+
 
 /**
  * The representation of of a specific physical component
@@ -52,12 +48,13 @@ function ElectronicDevice(type, label, comp, termMappings){
     
     
     /* the mappings of the logical to the physical terminals */
-    this.termMapppings = termMappings;
+    this.termMappings = termMappings;
     
     if( this.termMappings == undefined && this.comp != undefined && this.type != undefined ){
 	/* try to get the default mappings of the component for this device type */
 	this.termMappings = this.comp.asDevice(this.type);
     }
+    
     
     /* initialize the component as this device */
     if(this.comp != undefined && this.comp.init != undefined){
@@ -66,16 +63,23 @@ function ElectronicDevice(type, label, comp, termMappings){
 }
 
 
-function Terminal(label){
-    ElectronicElement.call(this,label);
-    this.label=label;
-}
-
 function Connection(terminals){
     
     /* we will allow having more than 2 terminals for simplicity, however physical paths need to be drawn to connect all of them */
     this.terminals = terminals;
 }
+
+Connection.prototype = new Connection();
+Connection.prototype.constructor = Connection;
+
+
+
+function Track(connection,label){
+    ElectronicElement.call(this,label);
+}
+
+Track.prototype = new ElectronicElement();
+Track.prototype.constructor = Track;
 
 /**
  * The representation of the abstraction of an electronic circuit
@@ -107,19 +111,17 @@ ElectronicCircuit.prototype.createPCB=function(){
 	pcb.addComponent(this.devices[d].comp);
     }
     
-    pcb.connections = this.connections;
+    
+    for (var c in this.connections){
+	pcb.addTrack(new Track(this.connections[c]));
+    } 
     
     return pcb;
 };
 
 
-function Footprint(position,shape){
-    PhysicalObject.call(this,position,shape);
-}
 
 
-PCB.prototype = new PhysicalObject();
-PCB.prototype.constructor = PCB;
 
 ElectronicElement.prototype = new ElectronicElement();
 ElectronicElement.prototype.constructor = ElectronicElement;
@@ -130,27 +132,43 @@ ElectronicComponent.prototype.constructor = ElectronicComponent;
 ElectronicDevice.prototype = new ElectronicDevice();
 ElectronicDevice.prototype.constructor = ElectronicDevice;
 
-
-Terminal.prototype = new ElectronicElement();
-Terminal.prototype.constructor = Terminal;
-
-Connection.prototype = new PhysicalObject();
-Connection.prototype.constructor = Connection;
-
-Footprint.prototype = new PhysicalObject();
-Footprint.prototype.constructor = Footprint;
-
-
-
 ElectronicDevice.prototype.getTerminal=function(label){
     var m = this.termMappings[label];
     if(m != undefined){
 	return this.comp.terminals[m];
-    }
+    };
 };
 
 
+/**
+ * The representation of a possible physical arrangement for an electronic circuit
+ */
+function PCB(){
+    
+    PhysicalObject.call(this);
+    /* components on this pcb */
+    this.components=[];
+    
+    /* tracks on this pcb */
+    this.tracks=[];
+    
+    this.layers={
+	    silkscreen : {
+		visible : true
+	    },
+	    soldermask : {
+		visible : true
+	    },
+	    tracks : {
+		visible : true
+	    }
+	    
+    };
+    
+}
 
+PCB.prototype = new PhysicalObject();
+PCB.prototype.constructor = PCB;
 
 
 PCB.prototype.addComponent = function(component){
@@ -159,19 +177,27 @@ PCB.prototype.addComponent = function(component){
 };
 
 
-PCB.prototype.draw = function(canvas) {
-    if (this.shape) {
-	this.shape.draw(canvas, this.position, this.scale);
-    }
+PCB.prototype.addTrack = function(track){
+    this.tracks.push(track);
+    this.addPart(track.footprint);
 };
 
-PCB.prototype.addConnection = function(connection){
-    this.connections.push(connection);
+PCB.prototype.setComponentsVisible=function(visible){
+  for(var c in this.components){
+      var fp = this.components[c].footprint;
+      
+      if(fp.shape){
+	  fp.shape.visible = visible;
+      }
+  }  
 };
 
 ElectronicComponent.prototype.addTerminal=function(terminal){
     this.terminals.push(terminal);
     this.footprint.addPart(terminal.footprint);
+    if(terminal.hole != undefined){
+	terminal.footprint.addPart(terminal.hole);
+    }
 };
 
 ElectronicComponent.prototype.addInternalConnection = function(connection){
@@ -185,7 +211,7 @@ ElectronicComponent.prototype.createTerminals=function(count,terminalPrefix){
     }
     
     for(var i=0;i<count;i++){
-	var t=new Terminal(terminalPrefix+(i+1));
+	var t=new THT(terminalPrefix+(i+1));
 	this.addTerminal(t);
     }
 };
@@ -204,6 +230,14 @@ ElectronicComponent.prototype.asDevice=function(deviceType){
     return this.deviceMappings[deviceType];
 };
 
+function Terminal(label){
+    ElectronicElement.call(this,label);
+    this.label=label;
+}
+
+Terminal.prototype = new ElectronicElement();
+Terminal.prototype.constructor = Terminal;
+
 
 Terminal.prototype.onReady = function(){
     /* initialize label with id if undefined */
@@ -217,6 +251,35 @@ Terminal.prototype.setLabel=function(label){
     this.label = label;
 };
 
+/**
+ * Through hole terminal
+ * @param - the hole is actually the footprint of the hole needed to pass this terminal through
+ */
+function THT(label,hole){
+    Terminal.call(this,label);
+    this.hole;
+    
+    if(hole != undefined){
+	this.hole = hole;
+    }
+    else{
+	/* by default use a circle hole with the diameter of one ( radius 0.5 ) */
+	this.hole = new Hole(0.5);
+    }
+    
+}
+
+THT.prototype = new Terminal();
+THT.prototype.constructor = THT;
+
+
+function Hole(radius){
+    Footprint.call(this);
+    this.shape = new Circle(radius,'#000000','#ffffff');
+}
+
+Hole.prototype = new Footprint();
+Hole.prototype.constructor = Hole;
 
 
 this.PcbUtil = this.PcbUtil || { constants : {}, generators : {}};
@@ -241,7 +304,11 @@ PcbUtil.generators.LEDcathodeFootprint = function(){
 
 PcbUtil.generators.standardTerminalFootprint = function(){
     return new Circle(PcbUtil.constants.standardTerminalRadius,'#000000','#000000');
-}
+};
+
+PcbUtil.generators.circleTerminalFootprint = function(radius){
+    return new Circle(radius,'#000000','#000000');
+};
 
 console.log(PcbUtil);
 

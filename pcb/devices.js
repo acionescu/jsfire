@@ -71,7 +71,7 @@ DeviceTypes.BIPOLAR_TRANSISTOR={
 	    E : "E", // emiter
 	    C : "C" // collector
 	}
-}
+};
 
 
 DeviceTypes.QUARTZ = {
@@ -88,6 +88,7 @@ DeviceTypes.ATMEGA_328 = {
  * A generic DC supply
  */
 function DCSupply(label, comp, mappings) {
+
     ElectronicDevice.call(this, DeviceTypes.DC_SUPPLY.N, label, comp, mappings);
 
 }
