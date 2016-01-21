@@ -108,9 +108,10 @@ stc.addConnection(vccConn);
 
 var pcb1 = stc.createPCB();
 
-pcb1.setScale([ 4.7, 4.7 ]);
+universe.setScale([ 4.7, 4.7 ]);
 pcb1.shape = new Rectangle(50, 70);
 pcb1.setPosition(70, 60);
+pcb1.selectable = false;
 
 universe.addObject(pcb1);
 
@@ -436,7 +437,7 @@ gndTb1.addTrace(9, CONSTANTS.SOUTH);
 
 var gndTrack1 = gndTb1.getTrack();
 
-pcb1.addTrack(gndTrack1);
+//pcb1.addTrack(gndTrack1);
 
 //var vout12tb = new TrackBuilder();
 //

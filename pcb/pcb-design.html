@@ -30,22 +30,30 @@
 
 <body>
 
-	<script src="../core/util.js"></script>
+	<canvas id="commSimCanvas" width="1000" height="700"></canvas>
+
+	<div id="controls">
+Tool:
+		<select name="Tools" id="toolSelector">
+			<option value="Move">Move</option>
+			<option value="Rotate">Rotate</option>
+			<option value="PathBuilder">Path Builder</option>
+			
+		</select>
+	</div>
+	
+	
+	
+		<script src="../core/util.js"></script>
 	<script src="../core/particle.js"></script>
 	<script src="pcb.js"></script>
 	<script src="devices.js"></script>
 	<script src="components.js"></script>
 	<script src="pcb-simulator.js"></script>
 	<script src="controls.js"></script>
-	<canvas id="commSimCanvas" width="1000" height="700"></canvas>
-
-	<div id="controls">
-Tool:
-		<select name="Tools" id="toolSelector">
-			<option value="Rotate">Rotate</option>
-			
-		</select>
-	</div>
+	
+	
+	
 	<script>
 	var c = document.getElementById("commSimCanvas");
 	var ctx = c.getContext("2d");

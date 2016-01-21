@@ -20,6 +20,33 @@ Footprint.prototype = new PhysicalObject();
 Footprint.prototype.constructor = Footprint;
 
 
+/* The symbolic representation of a one to one connection */
+function Path(){
+    /* a path is actually a sequence of track points */
+    this.trackPoints=[];
+}
+
+Path.prototype = new PhysicalObject();
+Path.prototype.constructor = Path;
+
+Path.prototype.addTrackPoint=function(trackPoint){
+    this.trackPoints.push(trackPoint);
+};
+
+
+/**
+ * A point on a track where two or more paths meet
+ * It can also represent only an inflection point in a single path , or a terminal or any combination of the above
+ */
+function TrackPoint(footprint){
+    /* a track point can be an arbitrary point or a terminal, if it's a terminal the footprint of that terminal needs to be passed */
+    this.footprint=footprint;
+}
+
+TrackPoint.prototype = new PhysicalObject();
+TrackPoint.prototype.constructor = TrackPoint;
+
+
 /**
  * The representation of of a specific physical component
  */
@@ -139,6 +166,30 @@ ElectronicDevice.prototype.getTerminal=function(label){
     };
 };
 
+/**
+ * A manager for the tracks on a pcb
+ */
+function TracksManager(){
+    /** track points by their physical id */
+    this.trackPoints = {};
+}
+
+TracksManager.prototype.constructor = TracksManager;
+
+/**
+ * Returns a track point from a footprint
+ * @param footprint
+ */
+TracksManager.prototype.getTrackPoint=function(footprint){
+    /* see if we already have a track point for this */
+    var tp = this.trackPoints[footprint.id];
+    /* if not create one */
+    if(tp == undefined){
+	tp = new TrackPoint(footprint);
+	this.trackPoints[footprint.id] = tp;
+    }
+    return tp;
+};
 
 /**
  * The representation of a possible physical arrangement for an electronic circuit
@@ -165,6 +216,12 @@ function PCB(){
 	    
     };
     
+    this.tracksManager = new TracksManager();
+    
+    this.paths = new PhysicalObject();
+    
+    this.addPart(this.paths);
+    
 }
 
 PCB.prototype = new PhysicalObject();
@@ -189,8 +246,17 @@ PCB.prototype.setComponentsVisible=function(visible){
       if(fp.shape){
 	  fp.shape.visible = visible;
       }
-  }  
+  };  
 };
+
+PCB.prototype.getTrackPoint=function(footprint){
+    return this.tracksManager.getTrackPoint(footprint);
+};
+
+PCB.prototype.addPath = function(path){
+    this.paths.addPart(path);
+};
+
 
 ElectronicComponent.prototype.addTerminal=function(terminal){
     this.terminals.push(terminal);

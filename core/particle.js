@@ -1,16 +1,14 @@
-var CONSTANTS={
-	half_PI : Math.PI/2,
-	EAST : 0 ,
-	WEST : Math.PI,
-	SOUTH : -Math.PI/2,
-	NORTH : Math.PI/2,
-	SE : -Math.PI/4,
-	SW : -3*Math.PI/4,
-	NE : Math.PI/4,
-	NW : 3*Math.PI/4
-}; 
-
-
+var CONSTANTS = {
+    half_PI : Math.PI / 2,
+    EAST : 0,
+    WEST : Math.PI,
+    SOUTH : -Math.PI / 2,
+    NORTH : Math.PI / 2,
+    SE : -Math.PI / 4,
+    SW : -3 * Math.PI / 4,
+    NE : Math.PI / 4,
+    NW : 3 * Math.PI / 4
+};
 
 function Point(coords) {
     this.coords = coords;
@@ -48,9 +46,9 @@ Point.prototype.add = function(point) {
     return new Point(nc);
 };
 
-Point.prototype.subtract = function(point){
+Point.prototype.subtract = function(point) {
     this.checkPointDimension(point);
-    
+
     var nc = [];
 
     for (var i = 0; i < this.coords.length; i++) {
@@ -62,17 +60,18 @@ Point.prototype.subtract = function(point){
 
 /**
  * 
- * @param drot - delta rotation in radians
+ * @param drot -
+ *                delta rotation in radians
  */
-Point.prototype.rotate2D = function(drot){
-    var newCoord = [0,0];
-    
+Point.prototype.rotate2D = function(drot) {
+    var newCoord = [ 0, 0 ];
+
     var rotcos = Math.cos(drot);
     var rotsin = Math.sin(drot);
-    
-    newCoord[0] = this.coords[0]*rotcos - this.coords[1]*rotsin;
-    newCoord[1] = this.coords[0]*rotsin + this.coords[1]*rotcos;
-    
+
+    newCoord[0] = this.coords[0] * rotcos - this.coords[1] * rotsin;
+    newCoord[1] = this.coords[0] * rotsin + this.coords[1] * rotcos;
+
     this.coords = newCoord;
 };
 
@@ -81,7 +80,7 @@ function Shape(strokeColor, fillColor) {
      * allow drawing
      */
     this.visible = true;
-    
+
     this.fillColor;
     if (fillColor) {
 	this.fillColor = fillColor;
@@ -102,32 +101,39 @@ Shape.prototype.hitTest = function(pos, mouseX, mouseY) {
     return false;
 };
 
-
-function Rectangle(w, h,strokeColor, fillColor) {
-    Shape.call(this,strokeColor, fillColor);
+function Rectangle(w, h, strokeColor, fillColor) {
+    Shape.call(this, strokeColor, fillColor);
     this.width = w;
     this.height = h;
+
+    this.absoluteWidth;
+    this.absoluteHeight;
+    this.absolutePos;
 }
 
 Rectangle.prototype = new Shape();
 Rectangle.prototype.constructor = Rectangle;
 Rectangle.prototype.draw = function(canvas, position, scale, rotation) {
     var coords = position.coords;
-    
+
     var w = this.width;
     var h = this.height;
-    
-    if( Math.abs(rotation) == CONSTANTS.half_PI ){
-	
+
+    if (Math.abs(rotation) == CONSTANTS.half_PI) {
+
 	w = this.height;
 	h = this.width;
     }
-    
+
+    this.absoluteWidth = w * scale[0];
+    this.absoluteHeight = h * scale[1];
+    this.absolutePos = new Point([ scale[0] * coords[0], scale[1] * coords[1] ]);
+
     canvas.beginPath();
-    
-    canvas.rect(scale[0]*(coords[0] - w / 2), scale[1]*(coords[1] - h/ 2),
-	    scale[0]*w, scale[1]*h);
-    
+
+    canvas.rect(scale[0] * (coords[0] - w / 2), scale[1] * (coords[1] - h / 2),
+	    this.absoluteWidth, this.absoluteHeight);
+
     if (this.fillColor) {
 	canvas.fillStyle = this.fillColor;
 	canvas.fill();
@@ -139,14 +145,20 @@ Rectangle.prototype.draw = function(canvas, position, scale, rotation) {
 };
 
 Rectangle.prototype.hitTest = function(pos, mouseX, mouseY) {
-    
+    var pc = this.absolutePos.coords;
+
+    var w2 = this.absoluteWidth / 2;
+    var h2 = this.absoluteHeight / 2;
+
+    return ((mouseX >= (pc[0] - w2)) && (mouseX <= (pc[0] + w2))
+	    && (mouseY >= (pc[1] - h2)) && (mouseY <= (pc[1] + h2)));
 };
 
-function Ellipse(radX,radY, strokeColor, fillColor){
-    Shape.call(this,strokeColor, fillColor);
+function Ellipse(radX, radY, strokeColor, fillColor) {
+    Shape.call(this, strokeColor, fillColor);
     this.radX = radX;
     this.radY = radY;
-    
+
     /* absolute radius after scaling */
     this.absoluteXRadius;
     this.absoluteYRadius;
@@ -155,53 +167,53 @@ function Ellipse(radX,radY, strokeColor, fillColor){
 Ellipse.prototype = new Shape();
 Ellipse.prototype.constructor = Ellipse;
 
-
-Ellipse.prototype.draw = function(canvas, position, scale,rotation) {
+Ellipse.prototype.draw = function(canvas, position, scale, rotation) {
     var coords = position.coords;
- 
+
     canvas.beginPath();
-    
-    this.absolutePos = new Point([scale[0]*coords[0],scale[1]*coords[1]]);
-    this.absoluteXRadius = this.radX*scale[0];
-    this.absoluteYRadius = this.radY*scale[1];
-    
-    canvas.ellipse(this.absolutePos.coords[0], this.absolutePos.coords[1], this.absoluteXRadius, this.absoluteYRadius,rotation, 0, 2 * Math.PI, false);
-    
+
+    this.absolutePos = new Point([ scale[0] * coords[0], scale[1] * coords[1] ]);
+    this.absoluteXRadius = this.radX * scale[0];
+    this.absoluteYRadius = this.radY * scale[1];
+
+    canvas.ellipse(this.absolutePos.coords[0], this.absolutePos.coords[1],
+	    this.absoluteXRadius, this.absoluteYRadius, rotation, 0,
+	    2 * Math.PI, false);
+
     if (this.fillColor) {
 	canvas.fillStyle = this.fillColor;
 	canvas.fill();
     }
-    
+
     if (this.strokeColor) {
 	canvas.strokeStyle = this.strokeColor;
 	canvas.stroke();
     }
-   
+
     // console.log("draw circle "+this.radius);
 };
 
 Ellipse.prototype.hitTest = function(pos, mouseX, mouseY) {
-//    if (pos.distance(new Point([ mouseX, mouseY ])) <= this.radius) {
-//	return true;
-//    }
-    
+    // if (pos.distance(new Point([ mouseX, mouseY ])) <= this.radius) {
+    // return true;
+    // }
+
     var pt = new Point([ mouseX, mouseY ]).subtract(this.absolutePos);
-    
-    return ( (Math.pow(pt.coords[0]/this.absoluteXRadius, 2) + Math.pow(pt.coords[1]/this.absoluteYRadius,2)) < 1);
-    
-  //  return false;
+
+    return ((Math.pow(pt.coords[0] / this.absoluteXRadius, 2) + Math.pow(
+	    pt.coords[1] / this.absoluteYRadius, 2)) < 1);
+
+    // return false;
 };
 
 function Circle(radius, strokeColor, fillColor) {
-    Ellipse.call(this,radius,radius,strokeColor, fillColor);
+    Ellipse.call(this, radius, radius, strokeColor, fillColor);
     this.radius = radius;
-    
+
 }
 
 Circle.prototype = new Ellipse();
 Circle.prototype.constructor = Circle;
-
-
 
 function CustomShape(points) {
     Shape.call(this);
@@ -212,39 +224,38 @@ function CustomShape(points) {
 CustomShape.prototype = new Shape();
 CustomShape.prototype.constructor = CustomShape;
 
+CustomShape.prototype.draw = function(canvas, position, scale, rotation) {
 
-CustomShape.prototype.draw=function(canvas, position, scale,rotation){
-   
-    
-    if(this.points == undefined || this.points.legth <= 1){
+    if (this.points == undefined || this.points.legth <= 1) {
 	return;
     }
-    
+
     canvas.beginPath();
-    
+
     var pc = position.coords;
-    
-    canvas.moveTo((pc[0]+this.points[0].coords[0])*scale[0],(pc[1]+this.points[0].coords[1])*scale[1]);
-    
-    for(var i=1;i<this.points.length;i++){
-	canvas.lineTo((pc[0]+this.points[i].coords[0])*scale[0],(pc[1]+this.points[i].coords[1])*scale[1]);
+
+    canvas.moveTo((pc[0] + this.points[0].coords[0]) * scale[0],
+	    (pc[1] + this.points[0].coords[1]) * scale[1]);
+
+    for (var i = 1; i < this.points.length; i++) {
+	canvas.lineTo((pc[0] + this.points[i].coords[0]) * scale[0],
+		(pc[1] + this.points[i].coords[1]) * scale[1]);
     }
-    
-    if(this.closed){
+
+    if (this.closed) {
 	canvas.closePath();
     }
-    
+
     if (this.fillColor) {
 	canvas.fillStyle = this.fillColor;
 	canvas.fill();
     }
-    
+
     if (this.strokeColor) {
 	canvas.strokeStyle = this.strokeColor;
 	canvas.stroke();
     }
 };
-
 
 function PhysicalObject(position, shape, mass) {
     this.id;
@@ -253,17 +264,17 @@ function PhysicalObject(position, shape, mass) {
     this.shape = shape;
     this.mass = mass;
     this.position = position;
-    
-    /* how much to scale this object on each axis */
-    this.scale = [1,1];
+
+    // /* how much to scale this object on each axis */
+    // this.scale = [1,1];
     /**
      * Relative position to the parent
      */
-    this.relPos=new Point([0,0]);
-    
+    this.relPos = new Point([ 0, 0 ]);
+
     /* rotation of the object in radians */
-    this.rotation=0;
-    
+    this.rotation = 0;
+
     /* an object to store view data */
     this.view = {};
 
@@ -272,10 +283,14 @@ function PhysicalObject(position, shape, mass) {
     this.parts = new Array();
     /* the parent object of the current one */
     this.parent;
-    
-    if(!this.position){
-	this.position = new Point([0,0]);
+
+    if (!this.position) {
+	this.position = new Point([ 0, 0 ]);
     }
+    /**
+     * only if this is true the hitTest will run
+     */
+    this.selectable = true;
 
 };
 
@@ -295,104 +310,111 @@ PhysicalObject.prototype.onAttach = function(universe) {
 
     /* now we're sure that all parts have an id */
     this.indexParts();
-    
+
     /* allow specific object to do theri initialization */
     this.onReady();
 };
 
 /* Called after the object has been attached to a universe. Override as needed */
-PhysicalObject.prototype.onReady = function(){
-    
-    
+PhysicalObject.prototype.onReady = function() {
+
 };
 
-PhysicalObject.prototype.setPosition=function(x,y){
-    this.position=new Point([x,y]);
+PhysicalObject.prototype.setPosition = function(x, y) {
+    this.position = new Point([ x, y ]);
+
+    /*
+     * if we're setting the position directly make sure to update the relative
+     * position to the parent
+     */
+    if (this.parent != undefined) {
+	this.relPos = this.position.subtract(this.parent.position);
+    }
+
     this.updatePosition();
 };
 
-PhysicalObject.prototype.setRelativePos=function(x,y){
-    this.relPos = new Point([x,y]);
-    if(!!this.parent){
+PhysicalObject.prototype.setRelativePos = function(x, y) {
+    this.relPos = new Point([ x, y ]);
+    if (!!this.parent) {
 	this.parent.determinePartPosition(this);
     }
-   
-    
+
     this.updatePosition();
 };
 
-PhysicalObject.prototype.moveRelPos=function(x,y){
-    var newRelPos = this.relPos.add(new Point([x,y]));
-    this.setRelativePos(newRelPos.coords[0],newRelPos.coords[1]);
+PhysicalObject.prototype.moveRelPos = function(x, y) {
+    var newRelPos = this.relPos.add(new Point([ x, y ]));
+    this.setRelativePos(newRelPos.coords[0], newRelPos.coords[1]);
     console.log(newRelPos.coords);
 };
 
-PhysicalObject.prototype.move=function(x,y){
-    var newPos = this.position.add(new Point([x,y]));
-    this.setPosition(newPos.coords[0],newPos.coords[1]);
-    
-};
+PhysicalObject.prototype.move = function(x, y) {
+    var newPos = this.position.add(new Point([ x, y ]));
+    this.setPosition(newPos.coords[0], newPos.coords[1]);
 
+};
 
 /**
- * Returns the relative pos of this object relative to its ancestor with the specified depth 
- * ( if depth 0 or unspecified the relative pos to parent will be returned )
+ * Returns the relative pos of this object relative to its ancestor with the
+ * specified depth ( if depth 0 or unspecified the relative pos to parent will
+ * be returned )
+ * 
  * @param depth
  */
-PhysicalObject.prototype.getRelativePos=function(depth){
-    if(depth == undefined || depth <=0){
+PhysicalObject.prototype.getRelativePos = function(depth) {
+    if (depth == undefined || depth <= 0) {
 	return this.relPos;
     }
-    
-    return this.parent.getRelativePos(depth-1).add(this.relPos);
+
+    return this.parent.getRelativePos(depth - 1).add(this.relPos);
 };
 
+// PhysicalObject.prototype.setScale = function(scale){
+// this.scale = scale;
+// this.updateScale();
+// };
 
-PhysicalObject.prototype.setScale = function(scale){
-    this.scale = scale;
-    this.updateScale();
-};
-
-PhysicalObject.prototype.setRotation=function(rot){
-    this.rotation = rot % (2*Math.PI);
-    if(Math.abs(this.rotation) > Math.PI){
-	this.rotation = this.rotation - Math.sign(this.rotation)*Math.PI;
+PhysicalObject.prototype.setRotation = function(rot) {
+    this.rotation = rot % (2 * Math.PI);
+    if (Math.abs(this.rotation) > Math.PI) {
+	this.rotation = this.rotation - Math.sign(this.rotation) * 2 * Math.PI;
     }
 };
 
 /**
  * drot - rotation delta in radians
  */
-PhysicalObject.prototype.rotate=function(drot){
-    this.setRotation(this.rotation+drot);
-    
+PhysicalObject.prototype.rotate = function(drot) {
+    this.setRotation(this.rotation + drot);
+
     /* update parts scale */
     this.parts.forEach(function(part) {
-	
+
 	/* update part relative postion */
 	part.relPos.rotate2D(drot);
 	/* update part absolute position */
 	this.determinePartPosition(part);
 	/* let the part rotate its inner parts */
 	part.rotate(-drot);
-	
+
     }, this);
 };
 
-PhysicalObject.prototype.updatePosition = function(){
-    
+PhysicalObject.prototype.updatePosition = function() {
+
     /* update parts positions */
     this.parts.forEach(function(part) {
 	this.determinePartPosition(part);
     }, this);
 };
 
-PhysicalObject.prototype.updateScale= function(){
-    /* update parts scale */
-    this.parts.forEach(function(part) {
-	part.setScale ([this.scale[0],this.scale[1]]);
-    }, this);
-};
+// PhysicalObject.prototype.updateScale= function(){
+// /* update parts scale */
+// this.parts.forEach(function(part) {
+// part.setScale ([this.scale[0],this.scale[1]]);
+// }, this);
+// };
 
 /**
  * Determine part absolute position from the parent's position
@@ -400,15 +422,15 @@ PhysicalObject.prototype.updateScale= function(){
  * @param part
  */
 PhysicalObject.prototype.determinePartPosition = function(part) {
-    if(this.position == undefined){
-	throw "positiond undefined for part "+part.id;
+    if (this.position == undefined) {
+	throw "positiond undefined for part " + part.id;
     }
     var pPos = new Point(this.position.coords.slice(0));
     if (part.relPos) {
 	pPos = pPos.add(part.relPos);
     }
 
-    //part.position = pPos;
+    // part.position = pPos;
     part.setPosition(pPos.coords[0], pPos.coords[1]);
 };
 
@@ -432,9 +454,9 @@ PhysicalObject.prototype.onDettach = function() {
 PhysicalObject.prototype.compute = function(universe) {
 };
 
-PhysicalObject.prototype.draw = function(canvas) {
+PhysicalObject.prototype.draw = function(canvas, scale) {
     if (this.shape && this.shape.visible) {
-	this.shape.draw(canvas, this.position, this.scale,this.rotation);
+	this.shape.draw(canvas, this.position, scale, this.rotation);
     }
 };
 
@@ -451,21 +473,21 @@ PhysicalObject.prototype.addPart = function(part, relPos) {
 	this.universe.addObject(part);
 	this.partsMap[part.id] = part;
     }
-    
+
     /* if the part doesn't have a position, copy the position of the parent */
     if (!!relPos) {
 	part.relpos = relPos;
     }
-    
-    /* adjust part scale */
-    if(!part.scale){
-	throw "scale undefined";
-    }
-    
-    part.setScale([part.scale[0]*this.scale[0],part.scale[1]*this.scale[1]]);
-    
+
+    // /* adjust part scale */
+    // if(!part.scale){
+    // throw "scale undefined";
+    // }
+    //    
+    // part.setScale([part.scale[0]*this.scale[0],part.scale[1]*this.scale[1]]);
+
     this.determinePartPosition(part);
-    
+
     this.parts.push(part);
     part.parent = this;
 
@@ -476,26 +498,70 @@ PhysicalObject.prototype.removePart = function(part) {
 };
 
 PhysicalObject.prototype.hitTest = function(mouseX, mouseY) {
-    if (!this.shape) {
+    if (!this.shape || !this.selectable) {
 	return false;
     }
     return this.shape.hitTest(this.position, mouseX, mouseY);
 };
 
-/**
- * 
- * @param mousePos - a {@link Point} 
- */
-PhysicalObject.prototype.onDrag = function(mousePos){
-    
+PhysicalObject.prototype.getTopSelectableAncestor = function() {
+    if (this.parent != undefined && this.parent.selectable) {
+	return this.parent.getTopSelectableAncestor();
+    }
+    return this;
 };
 
 /**
  * 
- * @param mousePos - a {@link Point} 
+ * @param mousePos -
+ *                a {@link Point}
  */
-PhysicalObject.prototype.onClick = function(mousePos){
-    
+PhysicalObject.prototype.onDrag = function(mousePos) {
+
+};
+
+/**
+ * 
+ * @param mousePos -
+ *                a {@link Point}
+ */
+PhysicalObject.prototype.onClick = function(mousePos) {
+
+};
+
+/**
+ * 
+ * @param mousePos -
+ *                a {@link Point}
+ */
+PhysicalObject.prototype.onDrop = function(mousePos) {
+
+};
+
+/**
+ * Handles the user interaction with the objects in the {@link Universe}
+ */
+function InteractionHandler() {
+
+}
+
+// InterractionHandler.prototype=new InterractionHandler();
+InteractionHandler.prototype.constructor = InteractionHandler;
+
+InteractionHandler.prototype.onObjectClick = function(obj, universe, mousePos) {
+
+};
+
+InteractionHandler.prototype.onObjectDrag = function(obj, universe, mousePos) {
+
+};
+
+InteractionHandler.prototype.onObjectDrop = function(obj, universe, mousePos) {
+
+};
+
+InteractionHandler.prototype.onKeyDown = function(event) {
+
 };
 
 function Universe(dimensions, canvasElem) {
@@ -506,59 +572,97 @@ function Universe(dimensions, canvasElem) {
     this.pointsObjects = new Object();
     this.objectsIndex = 0;
     this.intervalId;
+    this.scale = [ 1, 1 ];
 
     this.init(canvasElem);
+
+    this.interactionHandler;
 }
 
 Universe.prototype.init = function(canvasElem) {
     if (canvasElem) {
 	this.canvasElem = canvasElem;
 	this.canvas = canvasElem.getContext("2d");
-	
+
 	this.setupListeners();
     }
 };
 
-Universe.prototype.setupListeners=function(){
-    var c=this.canvasElem;
-    if(!c){
+Universe.prototype.setupListeners = function() {
+    var c = this.canvasElem;
+    if (!c) {
 	return;
     }
-    var self=this;
-    c.addEventListener('mousedown',function(e){
-	
-	    var relMousePos = self.getRelMousePos(e.clientX, e.clientY);
-	    var relX = relMousePos.mouseX;
-	    var relY = relMousePos.mouseY;
-	    
-	    var hitObj = self.getHitObject(relX,relY);
-	    
-	    if(hitObj){
-	    	console.log("hit("+relX+","+relY+")->"+hitObj.id);
-	    	hitObj.onDrag(relX,relY);
-	    	var onMouseMove = function(e){
-	    	    var newMousePos = self.getRelMousePos(e.clientX, e.clientY);
-	    	    hitObj.onDrag(newMousePos.mouseX,newMousePos.mouseY);
-	    	};
-	    	
-	    	var onMouseUp=function(e){
-	    	    c.removeEventListener('mousemove',onMouseMove);
-	    	    c.removeEventListener('mouseup',onMouseUp);
-	    	};
-	    	
-	    	c.addEventListener('mousemove',onMouseMove);
-	    	c.addEventListener('mouseup',onMouseUp);
-	    	
+    var self = this;
+    c.addEventListener('mousedown', function(e) {
+
+	var relMousePos = self.getRelMousePos(e.clientX, e.clientY);
+	var relX = relMousePos.mouseX;
+	var relY = relMousePos.mouseY;
+
+	var hitObj = self.getHitObject(relX, relY);
+
+	if (hitObj) {
+
+	    /* we want to manipulate the top selectable ancestor */
+	    hitObj = hitObj.getTopSelectableAncestor();
+
+	    console.log("hit(" + relX + "," + relY + ")->" + hitObj.id);
+	    hitObj.onDrag(relX, relY);
+
+	    if (self.interactionHandler) {
+		self.interactionHandler.onObjectClick(hitObj, self, new Point([
+			relX / self.scale[0], relY / self.scale[1] ]));
 	    }
-	    
-	});
+
+	    var onMouseMove = function(e) {
+		var newMousePos = self.getRelMousePos(e.clientX, e.clientY);
+		hitObj.onDrag(newMousePos.mouseX, newMousePos.mouseY);
+
+		if (self.interactionHandler) {
+		    self.interactionHandler.onObjectDrag(hitObj, self,
+			    new Point([ newMousePos.mouseX / self.scale[0],
+				    newMousePos.mouseY / self.scale[1] ]));
+		}
+	    };
+
+	    var onMouseUp = function(e) {
+		c.removeEventListener('mousemove', onMouseMove);
+		c.removeEventListener('mouseup', onMouseUp);
+
+		var newMousePos = self.getRelMousePos(e.clientX, e.clientY);
+		hitObj.onDrop(newMousePos.mouseX, newMousePos.mouseY);
+
+		if (self.interactionHandler) {
+		    self.interactionHandler.onObjectDrop(hitObj, self,
+			    new Point([ newMousePos.mouseX / self.scale[0],
+				    newMousePos.mouseY / self.scale[1] ]));
+		}
+	    };
+
+	    c.addEventListener('mousemove', onMouseMove);
+	    c.addEventListener('mouseup', onMouseUp);
+
+	}
+
+    });
+
+};
+
+Universe.prototype.setScale = function(scale) {
+    this.scale = scale;
+};
+
+Universe.prototype.changeScale = function(amount) {
+    this.scale[0] += amount;
+    this.scale[1] += amount;
 };
 
 Universe.prototype.getRelMousePos = function(mouseX, mouseY) {
     var rect = this.canvasElem.getBoundingClientRect();
     var relPos = {
-	mouseX : mouseX - rect.left,
-	mouseY : mouseY - rect.top
+	mouseX : (mouseX - rect.left),
+	mouseY : (mouseY - rect.top)
     };
     return relPos;
 };
@@ -571,9 +675,6 @@ Universe.prototype.start = function(frequency) {
     }, frequency);
 };
 
-
-
-
 Universe.prototype.stop = function() {
     if (this.intervalId) {
 	clearInterval(this.intervalId);
@@ -581,9 +682,7 @@ Universe.prototype.stop = function() {
     }
 };
 
-
-
-Universe.prototype.update = function(){
+Universe.prototype.update = function() {
     this.compute();
     this.draw(this.canvas);
 };
@@ -599,7 +698,7 @@ Universe.prototype.compute = function() {
 Universe.prototype.draw = function(canvas) {
     canvas.clearRect(0, 0, canvas.width, canvas.height);
     for (var i = 0; i < this.objects.length; i++) {
-	this.objects[i].draw(canvas);
+	this.objects[i].draw(canvas, this.scale);
     }
     ;
 };
@@ -615,8 +714,8 @@ Universe.prototype.addObject = function(object) {
 
     this.objects.push(object);
     this.pointsObjects[object.position.coords] = object;
-//    console.log("Added object " + object.id + " at pos "
-//	    + object.position.coords);
+    // console.log("Added object " + object.id + " at pos "
+    // + object.position.coords);
     /* make the object aware that it has been added to the universe */
     object.onAttach(this);
 };
@@ -626,8 +725,8 @@ Universe.prototype.removeObject = function(object) {
     this.objects.splice(objIndex, 1);
     delete this.pointsObjects[object.position.coords];
     object.onDettach(this);
-//    console.log("Removed object " + object.id + " at post "
-//	    + object.position.coords);
+    // console.log("Removed object " + object.id + " at post "
+    // + object.position.coords);
 };
 
 Universe.prototype.getObjectByCoords = function(coords) {
