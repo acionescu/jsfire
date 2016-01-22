@@ -552,6 +552,10 @@ InteractionHandler.prototype.onObjectClick = function(obj, universe, mousePos) {
 
 };
 
+InteractionHandler.prototype.onEmptyClick = function(obj, universe, mousePos) {
+
+};
+
 InteractionHandler.prototype.onObjectDrag = function(obj, universe, mousePos) {
 
 };
@@ -644,10 +648,51 @@ Universe.prototype.setupListeners = function() {
 	    c.addEventListener('mouseup', onMouseUp);
 
 	}
+	else{
+	    if (self.interactionHandler) {
+		self.interactionHandler.onEmptyClick(self, new Point([
+			relX / self.scale[0], relY / self.scale[1] ]));
+	    }
+	}
 
     });
 
 };
+
+Universe.prototype.registerMouseMove=function(func){
+    return this.registerMouseEventListener('mousemove', func);
+};
+
+Universe.prototype.registerMouseDown=function(func){
+    return this.registerMouseEventListener('mousedown', func);
+};
+
+
+Universe.prototype.registerMouseEventListener = function(eventType,func){
+    var self = this;
+    /* create a wrapper event listener function */
+    var wrapper = function(e){
+	var newMousePos = self.getRelMousePos(e.clientX, e.clientY);
+	/* all the passed function with the relative mouse pos */
+	func(self, new Point([ newMousePos.mouseX / self.scale[0],
+			    newMousePos.mouseY / self.scale[1] ]));
+    };
+    /* register the wrapper */
+    c.addEventListener(eventType, wrapper);
+    /* 
+     * return an object with event type and listener function
+     * this can be used to remove the listener
+     *  */
+    return {
+	eventType : eventType,
+	listener : wrapper
+    };
+};
+
+Universe.prototype.removeMouseEventListener = function(handler){
+    c.removeEventListener(handler.eventType, handler.listener);
+};
+
 
 Universe.prototype.setScale = function(scale) {
     this.scale = scale;

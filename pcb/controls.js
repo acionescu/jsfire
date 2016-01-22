@@ -109,6 +109,7 @@ RotateTool.prototype.onObjectClick=function(obj, universe, mousePos){
 
 function PathBuilderTool(){
     this.currentPath;
+    this.mouseMoveListener;
 }
 
 PathBuilderTool.prototype = new Tool();
@@ -144,11 +145,27 @@ PathBuilderTool.prototype.onObjectClick=function(obj, universe, mousePos){
 	this.currentPath.addTrackPoint(ctp);
 	CONTEXT.selectedPcb.addPath(this.currentPath);
 	
+	this.mouseMoveListener = universe.registerMouseMove(this.onMouseMove);
+	
     }
     /* if it already exists , then we're ending it */
     else{
 	//todo
+	
+	universe.removeMouseEventListener(this.mouseMoveListener);
+	/* remove the mouse move listener */
     }
+};
+
+/**
+ * This should be called only while we're building a path
+ */
+PathBuilderTool.prototype.onMouseMove = function(universe, mousePos){
+    console.log('move');
+};
+
+PathBuilderTool.prototype.onEmptyClick=function(universe, mousePos){
+    console.log("empty");
 };
 
 var toolMappings = {
@@ -205,6 +222,11 @@ PCBActionHandler.prototype.onObjectDrag=function(obj,universe,mousePos){
 
 PCBActionHandler.prototype.onObjectDrop=function(obj,universe,mousePos){
     CONTROLS.selectedTool.onObjectDrop(obj,universe,mousePos);
+    universe.update();
+};
+
+PCBActionHandler.prototype.onEmptyClick=function(universe,mousePos){
+    CONTROLS.selectedTool.onEmptyClick(universe,mousePos);
     universe.update();
 };
 
