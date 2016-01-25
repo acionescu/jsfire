@@ -24,6 +24,10 @@ Footprint.prototype.constructor = Footprint;
 function Path(){
     /* a path is actually a sequence of track points */
     this.trackPoints=[];
+    this.shape = new CustomShape();
+    this.shape.strokeColor='#ff0000';
+    
+    this.selectable = false;
 }
 
 Path.prototype = new PhysicalObject();
@@ -31,8 +35,86 @@ Path.prototype.constructor = Path;
 
 Path.prototype.addTrackPoint=function(trackPoint){
     this.trackPoints.push(trackPoint);
+    
+    
+    this.shape.points.push(trackPoint.footprint.position.subtract(this.position));
+    
+//    var points = [];
+//    var self = this;
+//    this.trackPoints.forEach(function(value,index){
+//	points.push(value.footprint.position.subtract(self.position));
+//	
+//    });
+//
+//    this.shape.points=points;
+    
+    
+    
+};
+/**
+ * 
+ * @param removeHandler - if true will remove the footprint too
+ */
+Path.prototype.removeLastPoint=function(removeHandler){
+    var tp = this.trackPoints.pop();
+    this.shape.points.pop();
+    if(removeHandler){
+	this.removePart(tp.footprint,true);
+    }
 };
 
+Path.prototype.removePoint = function(index, removeHandler){
+    var tp = this.trackPoints.splice(index,1)[0];
+    this.shape.points.splice(index,1);
+    if(removeHandler){
+	this.removePart(tp.footprint,true);
+    }
+};
+
+Path.prototype.getFirstPoint=function(){
+    return this.trackPoints[0];
+};
+
+Path.prototype.getPrevPoint = function(count){
+    if(count==undefined){
+	count =2;
+    }
+    else{
+	count++;
+    }
+    return this.trackPoints[this.trackPoints.length-count];
+};
+
+Path.prototype.getLastPoint=function(){
+    return this.trackPoints[this.trackPoints.length-1];
+};
+
+Path.prototype.updateLastPointPos = function(pos){
+    var lp = this.getLastPoint();
+    lp.footprint.setPosition(pos.coords[0],pos.coords[1]);
+    this.shape.points[this.trackPoints.length-1] = pos.subtract(this.position);
+};
+
+Path.prototype.updatePointPos=function(index,pos){
+    this.trackPoints[index].footprint.setPosition(pos.coords[0],pos.coords[1]);
+    this.shape.points[index] = pos.subtract(this.position);
+};
+
+/**
+ * how many points
+ */
+Path.prototype.size = function(){
+    return this.trackPoints.length;
+};
+
+/**
+ * Mark this path as complete
+ */
+Path.prototype.setComplete = function(){
+    for(var i=1;i<this.trackPoints.length;i++){
+	this.trackPoints[i].footprint.setSelectable(true);
+    }
+};
 
 /**
  * A point on a track where two or more paths meet
@@ -255,6 +337,10 @@ PCB.prototype.getTrackPoint=function(footprint){
 
 PCB.prototype.addPath = function(path){
     this.paths.addPart(path);
+};
+
+PCB.prototype.removePath = function(path){
+    this.paths.removePart(path, true);
 };
 
 

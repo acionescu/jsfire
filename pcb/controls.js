@@ -33,6 +33,9 @@ var keyActions = {
 //	    pcb1.setScale([pcb1.scale[0]-1,pcb1.scale[1]-1]);
 	    universe.changeScale(-1);
 	    
+	},
+	"Ctrl-U+0008" : function(evt){
+	    universe.interactionHandler.undo();
 	}
 	
 };
@@ -121,6 +124,8 @@ PathBuilderTool.prototype.onSelection=function(){
     CONTEXT.selectedPcb.components.forEach(function(c){
 	c.footprint.selectable = false;
     });
+    
+    CONTEXT.selectedPcb.selectable = false;
 };
 
 PathBuilderTool.prototype.onDeselection=function(){
@@ -131,6 +136,11 @@ PathBuilderTool.prototype.onDeselection=function(){
     });
     
     this.currentPath = undefined;
+    
+    if(this.mouseMoveListener){
+	universe.removeMouseEventListener(this.mouseMoveListener);
+    }
+    
 };
 
 PathBuilderTool.prototype.onObjectClick=function(obj, universe, mousePos){
@@ -139,34 +149,177 @@ PathBuilderTool.prototype.onObjectClick=function(obj, universe, mousePos){
     /* if no current path exists then we must be starting one right here */
     if(this.currentPath == undefined){
 	this.currentPath = new Path();
-	
-	/* get a track point for the object */
-	var ctp = CONTEXT.selectedPcb.getTrackPoint(obj);
-	this.currentPath.addTrackPoint(ctp);
+	/* add path to the pcb */
 	CONTEXT.selectedPcb.addPath(this.currentPath);
 	
-	this.mouseMoveListener = universe.registerMouseMove(this.onMouseMove);
+	/* get a track point for the starting point */
+	var ctp = CONTEXT.selectedPcb.getTrackPoint(obj);
+	/* and add it to the path */
+	this.currentPath.addTrackPoint(ctp);
+	
+	
+	/* then we need to create a point that will follow the current position of the mouse */
+	
+	this.createNewPoint(mousePos);
+	this.createNewPoint(mousePos);
+	
+	/* and an intermediary point to allow 45 degrees transitions */
+	  var pp = this.currentPath.getPrevPoint(1);
+	    pp.footprint.setSelectable(false);
+	    pp.footprint.setVisible(false);
+	
+	this.mouseMoveListener = universe.registerMouseMove(this.onMouseMove,this);
+	
+	
 	
     }
     /* if it already exists , then we're ending it */
     else{
 	//todo
 	
-	universe.removeMouseEventListener(this.mouseMoveListener);
-	/* remove the mouse move listener */
+	
+	/* get a track point for the starting point */
+	var ctp = CONTEXT.selectedPcb.getTrackPoint(obj);
+	
+	/* don't allow circular paths */
+	if(ctp != this.currentPath.getFirstPoint()){
+	    this.currentPath.removeLastPoint(true);
+	    /* add last point to the path */
+	    this.currentPath.addTrackPoint(ctp);
+	    
+	    
+	    this.updateIntermediaryPoint(ctp.footprint.getPosition());
+	    /* remove the mouse move listener */
+		universe.removeMouseEventListener(this.mouseMoveListener);
+		
+		this.currentPath.setComplete();
+		
+		this.currentPath = undefined;
+	}
+	
     }
 };
+
+PathBuilderTool.prototype.createNewPoint=function(pos){
+    /* we'll use a small circle as handler */
+	var handler = new Footprint();
+	handler.shape = new Circle(1, '#ff0000');
+	handler.setPosition(pos.coords[0],pos.coords[1]);
+	handler.setSelectable(false);
+	this.currentPath.addPart(handler);
+	
+	/* get a track point for the handler */
+	var ltp = CONTEXT.selectedPcb.getTrackPoint(handler);
+	this.currentPath.addTrackPoint(ltp);
+	
+	
+	
+};
+
 
 /**
  * This should be called only while we're building a path
  */
 PathBuilderTool.prototype.onMouseMove = function(universe, mousePos){
-    console.log('move');
+   var prev = this.currentPath.getPrevPoint(2);
+   
+   var prevPos = prev.footprint.getPosition();
+   /*
+   var dif = mousePos.subtract(prevPos);
+   
+   var angle = Math.atan2(-dif.coords[1], dif.coords[0]);
+   
+   var constAngle = CONSTANTS.constrainToCardinal(angle);
+   
+   var radius = mousePos.distance(prevPos);
+   
+   var newPos = new Point([Math.cos(constAngle)*radius,-Math.sin(constAngle)*radius]);
+   newPos = newPos.add(prevPos);
+    
+    
+   this.currentPath.updateLastPointPos(newPos);
+   
+   
+   */
+   
+   var interPoint = this.getIntermediaryPoint(prevPos,mousePos);
+   
+
+   this.currentPath.updatePointPos(this.currentPath.size()-2,interPoint);
+   this.currentPath.updateLastPointPos(mousePos);
+   
+   universe.update();
 };
 
-PathBuilderTool.prototype.onEmptyClick=function(universe, mousePos){
-    console.log("empty");
+PathBuilderTool.prototype.updateIntermediaryPoint = function(pos){
+    var prev = this.currentPath.getPrevPoint(2);
+    
+    var prevPos = prev.footprint.getPosition();
+    
+    var interPoint = this.getIntermediaryPoint(prevPos,pos);
+    
+
+    this.currentPath.updatePointPos(this.currentPath.size()-2,interPoint);
 };
+
+PathBuilderTool.prototype.getIntermediaryPoint=function(sp,ep){
+    var dif = ep.subtract(sp);
+    var angle = Math.atan2(-dif.coords[1], dif.coords[0]);
+    
+    var constAngle = CONSTANTS.constrainToOblique(angle);
+    
+    var intery = ep.coords[1];
+    var interx = sp.coords[0] - (intery - sp.coords[1])*Math.tan(constAngle);
+    
+    if(interx > Math.max(sp.coords[0],ep.coords[0]) || interx < Math.min(sp.coords[0],ep.coords[0])){
+	interx = ep.coords[0];
+	intery = sp.coords[1] - ( interx - sp.coords[0])/Math.tan(constAngle);
+    }
+    
+    return new Point([interx,intery]);
+};
+
+
+PathBuilderTool.prototype.onEmptyClick=function(universe, mousePos){
+
+    if(this.currentPath){
+	if(this.currentPath.size() > 2){
+	    
+	  
+	    
+	    var lp = this.currentPath.getLastPoint();
+	    lp.footprint.setSelectable(false);
+	    lp.footprint.setVisible(false);
+	}
+	
+	
+	this.createNewPoint(mousePos);
+	this.createNewPoint(mousePos);
+	
+	  var pp = this.currentPath.getPrevPoint(1);
+	    pp.footprint.setSelectable(false);
+	    pp.footprint.setVisible(false);
+    }
+};
+
+
+PathBuilderTool.prototype.undo = function(){
+    if(this.currentPath){
+        if(this.currentPath.size() > 1 ){
+    	this.currentPath.removeLastPoint(true);  
+            var lp = this.currentPath.getLastPoint();
+            lp.footprint.setVisible(true);
+        }
+        else{
+    	CONTEXT.selectedPcb.removePath(this.currentPath);
+    	 /* remove the mouse move listener */
+	universe.removeMouseEventListener(this.mouseMoveListener);
+	
+	this.currentPath = undefined;
+        }
+    }
+};
+
 
 var toolMappings = {
 	"Move" : new MoveTool(),
@@ -227,6 +380,11 @@ PCBActionHandler.prototype.onObjectDrop=function(obj,universe,mousePos){
 
 PCBActionHandler.prototype.onEmptyClick=function(universe,mousePos){
     CONTROLS.selectedTool.onEmptyClick(universe,mousePos);
+    universe.update();
+};
+
+PCBActionHandler.prototype.undo = function(){
+    CONTROLS.selectedTool.undo();
     universe.update();
 };
 

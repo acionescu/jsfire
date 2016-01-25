@@ -7,7 +7,79 @@ var CONSTANTS = {
     SE : -Math.PI / 4,
     SW : -3 * Math.PI / 4,
     NE : Math.PI / 4,
-    NW : 3 * Math.PI / 4
+    NW : 3 * Math.PI / 4,
+    
+    boundRotation : function(rot){
+	rot = rot % (2 * Math.PI);
+	    if (Math.abs(rot) > Math.PI) {
+		rot = rot - Math.sign(rot) * 2 * Math.PI;
+	    }
+	    return rot;
+    },
+    
+    /**
+     * Given an angle it will return the cardinal point that it's most close to
+     * @param angle between -pi and pi
+     */
+    constrainToCardinal : function(rot){
+	var angle = CONSTANTS.boundRotation(rot);
+	var half_45 = Math.PI/8;
+	
+	var part = angle /half_45;
+	
+	if(angle >= 0 ){
+	    if( part <= 1){
+		return CONSTANTS.EAST;
+	    }
+	    else if(part <= 3){
+		return CONSTANTS.NE;
+	    }
+	    else if(part <= 5){
+		return CONSTANTS.NORTH;
+	    }
+	    else if(part <= 7){
+		return CONSTANTS.NW;
+	    }
+	    return CONSTANTS.WEST;
+	}
+	else{
+	    part *= -1;
+	    if( part <= 1){
+		return CONSTANTS.EAST;
+	    }
+	    else if(part <= 3){
+		return CONSTANTS.SE;
+		
+	    }
+	    else if(part <= 5){
+		return CONSTANTS.SOUTH;
+	    }
+	    else if(part <= 7){
+		return CONSTANTS.SW;
+	    }
+	    return CONSTANTS.WEST;
+	}
+    },
+    
+    constrainToOblique : function(rot){
+	var angle = CONSTANTS.boundRotation(rot);
+	
+	var part = angle /CONSTANTS.half_PI;
+	
+	if(part >=0 ){
+	    if(part < 1){
+		return CONSTANTS.NE;
+	    }
+	    return CONSTANTS.NW;
+	}
+	else{
+	    part *= -1;
+	    if(part <=1 ){
+		return CONSTANTS.SE;
+	    }
+	    return CONSTANTS.SW;
+	}
+    }
 };
 
 function Point(coords) {
@@ -27,7 +99,14 @@ Point.prototype.distance = function(point) {
 
 };
 
+Point.prototype.copy = function(){
+    return new Point([this.coords[0],this.coords[1]]);
+};
+
 Point.prototype.checkPointDimension = function(point) {
+    if(point.coords == undefined){
+	throw "Point without coords";
+    }
     if (this.coords.length != point.coords.length) {
 	throw "Can't compute distance between points with different dimensions: "
 		+ this.coords + " and " + point.coords;
@@ -113,6 +192,25 @@ function Rectangle(w, h, strokeColor, fillColor) {
 
 Rectangle.prototype = new Shape();
 Rectangle.prototype.constructor = Rectangle;
+
+Rectangle.prototype.compute = function(position,scale,rotation){
+    var coords = position.coords;
+
+    var w = this.width;
+    var h = this.height;
+
+    if (Math.abs(rotation) == CONSTANTS.half_PI) {
+
+	w = this.height;
+	h = this.width;
+    }
+
+    this.absoluteWidth = w * scale[0];
+    this.absoluteHeight = h * scale[1];
+    this.absolutePos = new Point([ scale[0] * coords[0], scale[1] * coords[1] ]);
+};
+
+
 Rectangle.prototype.draw = function(canvas, position, scale, rotation) {
     var coords = position.coords;
 
@@ -128,7 +226,7 @@ Rectangle.prototype.draw = function(canvas, position, scale, rotation) {
     this.absoluteWidth = w * scale[0];
     this.absoluteHeight = h * scale[1];
     this.absolutePos = new Point([ scale[0] * coords[0], scale[1] * coords[1] ]);
-
+    
     canvas.beginPath();
 
     canvas.rect(scale[0] * (coords[0] - w / 2), scale[1] * (coords[1] - h / 2),
@@ -144,7 +242,11 @@ Rectangle.prototype.draw = function(canvas, position, scale, rotation) {
     }
 };
 
-Rectangle.prototype.hitTest = function(pos, mouseX, mouseY) {
+Rectangle.prototype.hitTest = function(pos, mouseX, mouseY, scale, rotation) {
+    if(!this.visible){
+	this.compute(pos,scale,rotation);
+    }
+    
     var pc = this.absolutePos.coords;
 
     var w2 = this.absoluteWidth / 2;
@@ -167,15 +269,21 @@ function Ellipse(radX, radY, strokeColor, fillColor) {
 Ellipse.prototype = new Shape();
 Ellipse.prototype.constructor = Ellipse;
 
-Ellipse.prototype.draw = function(canvas, position, scale, rotation) {
+Ellipse.prototype.compute = function(position, scale, rotation){
     var coords = position.coords;
 
-    canvas.beginPath();
+    
 
     this.absolutePos = new Point([ scale[0] * coords[0], scale[1] * coords[1] ]);
     this.absoluteXRadius = this.radX * scale[0];
     this.absoluteYRadius = this.radY * scale[1];
+};
 
+Ellipse.prototype.draw = function(canvas, position, scale, rotation) {
+    this.compute(position, scale,rotation );
+    
+    canvas.beginPath();
+    
     canvas.ellipse(this.absolutePos.coords[0], this.absolutePos.coords[1],
 	    this.absoluteXRadius, this.absoluteYRadius, rotation, 0,
 	    2 * Math.PI, false);
@@ -193,10 +301,13 @@ Ellipse.prototype.draw = function(canvas, position, scale, rotation) {
     // console.log("draw circle "+this.radius);
 };
 
-Ellipse.prototype.hitTest = function(pos, mouseX, mouseY) {
+Ellipse.prototype.hitTest = function(pos, mouseX, mouseY, scale, rotation) {
     // if (pos.distance(new Point([ mouseX, mouseY ])) <= this.radius) {
     // return true;
     // }
+    if(!this.visible){
+	this.compute(pos,scale, rotation);
+    }
 
     var pt = new Point([ mouseX, mouseY ]).subtract(this.absolutePos);
 
@@ -219,6 +330,9 @@ function CustomShape(points) {
     Shape.call(this);
     this.closed = false;
     this.points = points;
+    if(!this.points){
+	this.points=[];
+    }
 }
 
 CustomShape.prototype = new Shape();
@@ -321,7 +435,10 @@ PhysicalObject.prototype.onReady = function() {
 };
 
 PhysicalObject.prototype.setPosition = function(x, y) {
-    this.position = new Point([ x, y ]);
+    //this.position = new Point([ x, y ]);
+    
+    this.position.coords[0] = x;
+    this.position.coords[1] = y;
 
     /*
      * if we're setting the position directly make sure to update the relative
@@ -332,6 +449,14 @@ PhysicalObject.prototype.setPosition = function(x, y) {
     }
 
     this.updatePosition();
+};
+
+PhysicalObject.prototype.setVisible=function(visible){
+    this.shape.visible = visible;
+};
+
+PhysicalObject.prototype.getPosition=function(){
+    return this.position;
 };
 
 PhysicalObject.prototype.setRelativePos = function(x, y) {
@@ -399,6 +524,10 @@ PhysicalObject.prototype.rotate = function(drot) {
 	part.rotate(-drot);
 
     }, this);
+};
+
+PhysicalObject.prototype.setSelectable = function(sel){
+    this.selectable = sel;
 };
 
 PhysicalObject.prototype.updatePosition = function() {
@@ -493,15 +622,22 @@ PhysicalObject.prototype.addPart = function(part, relPos) {
 
 };
 
-PhysicalObject.prototype.removePart = function(part) {
-    delete this.parts[part.id];
+PhysicalObject.prototype.removePart = function(part,removeFromUniverse) {
+    var partIndex = this.parts.indexOf(part);
+    delete this.parts[partIndex];
+    delete this.partsMap[part.id];
+    part.parent = undefined;
+    if(removeFromUniverse){
+	
+	this.universe.removeObject(part);
+    }
 };
 
-PhysicalObject.prototype.hitTest = function(mouseX, mouseY) {
+PhysicalObject.prototype.hitTest = function(mouseX, mouseY, scale) {
     if (!this.shape || !this.selectable) {
 	return false;
     }
-    return this.shape.hitTest(this.position, mouseX, mouseY);
+    return this.shape.hitTest(this.position, mouseX, mouseY, scale, this.rotation);
 };
 
 PhysicalObject.prototype.getTopSelectableAncestor = function() {
@@ -659,22 +795,22 @@ Universe.prototype.setupListeners = function() {
 
 };
 
-Universe.prototype.registerMouseMove=function(func){
-    return this.registerMouseEventListener('mousemove', func);
+Universe.prototype.registerMouseMove=function(func,obj){
+    return this.registerMouseEventListener('mousemove', func,obj);
 };
 
-Universe.prototype.registerMouseDown=function(func){
-    return this.registerMouseEventListener('mousedown', func);
+Universe.prototype.registerMouseDown=function(func,obj){
+    return this.registerMouseEventListener('mousedown', func,obj);
 };
 
 
-Universe.prototype.registerMouseEventListener = function(eventType,func){
+Universe.prototype.registerMouseEventListener = function(eventType,func, obj){
     var self = this;
     /* create a wrapper event listener function */
     var wrapper = function(e){
 	var newMousePos = self.getRelMousePos(e.clientX, e.clientY);
 	/* all the passed function with the relative mouse pos */
-	func(self, new Point([ newMousePos.mouseX / self.scale[0],
+	func.call(obj, self, new Point([ newMousePos.mouseX / self.scale[0],
 			    newMousePos.mouseY / self.scale[1] ]));
     };
     /* register the wrapper */
@@ -763,12 +899,21 @@ Universe.prototype.addObject = function(object) {
     // + object.position.coords);
     /* make the object aware that it has been added to the universe */
     object.onAttach(this);
+//    console.log("Added object "+object.id);
 };
 
 Universe.prototype.removeObject = function(object) {
     var objIndex = this.objects.indexOf(object);
     this.objects.splice(objIndex, 1);
     delete this.pointsObjects[object.position.coords];
+    if(object.parent){
+	object.parent.removePart(object,false);
+    }
+    
+    object.parts.forEach(function(p){
+	object.removePart(p,true);
+    });
+    
     object.onDettach(this);
     // console.log("Removed object " + object.id + " at post "
     // + object.position.coords);
@@ -780,7 +925,13 @@ Universe.prototype.getObjectByCoords = function(coords) {
 
 Universe.prototype.getHitObject = function(mouseX, mouseY) {
     for (var i = 0; i < this.objects.length; i++) {
-	var hit = this.objects[i].hitTest(mouseX, mouseY);
+	try{
+	var hit = this.objects[i].hitTest(mouseX, mouseY, this.scale);
+	}
+	catch(e){
+	    console.log("Failed to hit test object "+this.objects[i].id);
+	    throw e;
+	}
 	if (hit) {
 	    return this.objects[i];
 	}
