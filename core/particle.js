@@ -674,35 +674,6 @@ PhysicalObject.prototype.onDrop = function(mousePos) {
 
 };
 
-/**
- * Handles the user interaction with the objects in the {@link Universe}
- */
-function InteractionHandler() {
-
-}
-
-// InterractionHandler.prototype=new InterractionHandler();
-InteractionHandler.prototype.constructor = InteractionHandler;
-
-InteractionHandler.prototype.onObjectClick = function(obj, universe, mousePos) {
-
-};
-
-InteractionHandler.prototype.onEmptyClick = function(obj, universe, mousePos) {
-
-};
-
-InteractionHandler.prototype.onObjectDrag = function(obj, universe, mousePos) {
-
-};
-
-InteractionHandler.prototype.onObjectDrop = function(obj, universe, mousePos) {
-
-};
-
-InteractionHandler.prototype.onKeyDown = function(event) {
-
-};
 
 function Universe(dimensions, canvasElem) {
     this.canvasElem;
@@ -899,7 +870,7 @@ Universe.prototype.addObject = function(object) {
     // + object.position.coords);
     /* make the object aware that it has been added to the universe */
     object.onAttach(this);
-//    console.log("Added object "+object.id);
+    console.log("Added object "+object.id);
 };
 
 Universe.prototype.removeObject = function(object) {
@@ -915,8 +886,8 @@ Universe.prototype.removeObject = function(object) {
     });
     
     object.onDettach(this);
-    // console.log("Removed object " + object.id + " at post "
-    // + object.position.coords);
+     console.log("Removed object " + object.id + " at post "
+     + object.position.coords);
 };
 
 Universe.prototype.getObjectByCoords = function(coords) {

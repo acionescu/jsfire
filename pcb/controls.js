@@ -22,18 +22,21 @@ var keyActions = {
 	    pcb1.move(0,-1);
 	    
 	},
+	/* Ctrl plus */
 	"Ctrl-U+00BB" : function(evt){
 	    evt.preventDefault();
 //	    pcb1.setScale([pcb1.scale[0]+1,pcb1.scale[1]+1]);
 	    universe.changeScale(1);
 	    
 	},
+	/* Ctrl minus */
 	"Ctrl-U+00BD" : function(evt){
 	    evt.preventDefault();
 //	    pcb1.setScale([pcb1.scale[0]-1,pcb1.scale[1]-1]);
 	    universe.changeScale(-1);
 	    
 	},
+	/* Ctrl - Backspace */
 	"Ctrl-U+0008" : function(evt){
 	    universe.interactionHandler.undo();
 	}
@@ -144,16 +147,32 @@ PathBuilderTool.prototype.onDeselection=function(){
 };
 
 PathBuilderTool.prototype.onObjectClick=function(obj, universe, mousePos){
+    /* Ctrl Shift is down , then delete the point ( if an auxiliary point ) and the paths that contain it */
+    
+    if(this.isCtrlDown() && this.isShiftDown() ){
+	console.log("delete it");
+	
+	/* get the track point for this object */
+	var tp = CONTEXT.selectedPcb.getTrackPoint(obj,false);
+	if(tp != undefined){
+	    /* delete the track point */
+	    CONTEXT.selectedPcb.removeTrackPoint(tp);
+	}
+	
+	return;
+    }
+    
+    
+    
     /* if we're clicking on an existing object we either, begin a path or  end one */
     
     /* if no current path exists then we must be starting one right here */
     if(this.currentPath == undefined){
-	this.currentPath = new Path();
-	/* add path to the pcb */
-	CONTEXT.selectedPcb.addPath(this.currentPath);
+	this.currentPath = CONTEXT.selectedPcb.createNewPath();
+	
 	
 	/* get a track point for the starting point */
-	var ctp = CONTEXT.selectedPcb.getTrackPoint(obj);
+	var ctp = CONTEXT.selectedPcb.getTrackPoint(obj,true);
 	/* and add it to the path */
 	this.currentPath.addTrackPoint(ctp);
 	
@@ -179,7 +198,7 @@ PathBuilderTool.prototype.onObjectClick=function(obj, universe, mousePos){
 	
 	
 	/* get a track point for the starting point */
-	var ctp = CONTEXT.selectedPcb.getTrackPoint(obj);
+	var ctp = CONTEXT.selectedPcb.getTrackPoint(obj,true);
 	
 	/* don't allow circular paths */
 	if(ctp != this.currentPath.getFirstPoint()){
@@ -202,14 +221,17 @@ PathBuilderTool.prototype.onObjectClick=function(obj, universe, mousePos){
 
 PathBuilderTool.prototype.createNewPoint=function(pos){
     /* we'll use a small circle as handler */
-	var handler = new Footprint();
-	handler.shape = new Circle(1, '#ff0000');
-	handler.setPosition(pos.coords[0],pos.coords[1]);
-	handler.setSelectable(false);
-	this.currentPath.addPart(handler);
+//	var handler = new Footprint();
+//	handler.shape = new Circle(1, '#ff0000');
+//	handler.setPosition(pos.coords[0],pos.coords[1]);
+//	handler.setSelectable(false);
+//	this.currentPath.addPart(handler);
+//	
+//	/* get a track point for the handler */
+//	var ltp = CONTEXT.selectedPcb.getTrackPoint(handler,true);
+//	ltp.auxiliary = true;
 	
-	/* get a track point for the handler */
-	var ltp = CONTEXT.selectedPcb.getTrackPoint(handler);
+	var ltp = CONTEXT.selectedPcb.createNewTrackPoint(pos);
 	this.currentPath.addTrackPoint(ltp);
 	
 	
@@ -388,6 +410,14 @@ PCBActionHandler.prototype.undo = function(){
     universe.update();
 };
 
+PCBActionHandler.prototype.onKeyDown = function(evt){
+    CONTROLS.selectedTool.onKeyDown(evt);
+};
+
+PCBActionHandler.prototype.onKeyUp = function(evt){
+    CONTROLS.selectedTool.onKeyUp(evt);
+};
+
 onkeydown = function(evt) {
     evt = evt || window.event;
     console.log(evt);
@@ -397,8 +427,14 @@ onkeydown = function(evt) {
        action(evt);
        universe.update();
    }
+   else{
+       universe.interactionHandler.onKeyDown(evt);
+   }
     
 };
 
+onkeyup = function(evt){
+    universe.interactionHandler.onKeyUp(evt);
+};
 
 universe.interactionHandler = new PCBActionHandler();
