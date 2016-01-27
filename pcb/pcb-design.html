@@ -24,6 +24,11 @@
 /* 	border-color: black; */
 /* 	float: right; */
 }
+
+#global-commands {
+	position : absolute;
+	bottom : 20;
+	}
 </style>
 
 </head>
@@ -40,6 +45,10 @@ Tool:
 			<option value="PathBuilder">Path Builder</option>
 			
 		</select>
+		
+		<div id="global-commands">
+			<button onclick="comandManager.onSave()">Save</button>
+		</div>
 	</div>
 	
 	
@@ -50,9 +59,11 @@ Tool:
 	<script src="devices.js"></script>
 	<script src="components.js"></script>
 	<script src="pcb-simulator.js"></script>
+	
+	
 	<script src="controls.js"></script>
-	
-	
+	<script src="saved.js"></script>
+	<script src="loadSavedData.js"></script>
 	
 	<script>
 	var c = document.getElementById("commSimCanvas");

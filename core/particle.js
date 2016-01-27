@@ -86,6 +86,15 @@ function Point(coords) {
     this.coords = coords;
 }
 
+Point.prototype.constructor = Point;
+
+Point.prototype.fromJSON=function(json){
+    if(json == undefined){
+	return;
+    }
+    this.coords = json.coords;
+};
+
 Point.prototype.distance = function(point) {
     this.checkPointDimension(point);
 
@@ -178,6 +187,16 @@ Shape.prototype.draw = function(canvas, position) {
 
 Shape.prototype.hitTest = function(pos, mouseX, mouseY) {
     return false;
+};
+
+Shape.prototype.fromJSON=function(json){
+    if(json ==undefined){
+	return;
+    }
+    if(json.absolutePos != undefined ){
+	this.absolutePos = new Point(json.absolutePos.coords);
+    }
+	this.visible=json.visible;
 };
 
 function Rectangle(w, h, strokeColor, fillColor) {
@@ -338,6 +357,18 @@ function CustomShape(points) {
 CustomShape.prototype = new Shape();
 CustomShape.prototype.constructor = CustomShape;
 
+CustomShape.prototype.fromJSON=function(json){
+    if(json != undefined && json.points != undefined){
+	Shape.prototype.fromJSON.apply(this, arguments);
+	
+	this.points =[];
+	
+	this.points = json.points.map(function(p){
+	   return new Point(p.coords); 
+	});
+    }
+};
+
 CustomShape.prototype.draw = function(canvas, position, scale, rotation) {
 
     if (this.points == undefined || this.points.legth <= 1) {
@@ -409,6 +440,65 @@ function PhysicalObject(position, shape, mass) {
 };
 
 /**
+ * A way to convert this object into a json
+ */
+PhysicalObject.prototype.toJSON=function(){
+    var json = {
+	id : this.id,
+	shape : this.shape,
+	position: this.position,
+	rotation : this.rotation,
+	selectable : this.selectable
+	
+    };
+    if(this.parent != undefined){
+	json.parentId = this.parent.id;
+    }
+    if(this.parts != undefined){
+	json.partsIds = this.parts.map(function(p){ return p.id;});
+    }
+    
+    return json;
+};
+
+
+PhysicalObject.prototype.fromJSON=function(json){
+    if(json == undefined){
+	return;
+    }
+    if(this.id != json.id){
+	console.log(json);
+	throw "Can't restore from json : Expected id "+this.id+ " but was "+json.id;
+    }
+    
+    if(json.shape){
+	if(this.shape){
+	    this.shape.fromJSON(json.shape);
+	}
+	else{
+	    console.log("adding new shape for "+this.id);
+	    this.shape = json.shape;
+	}
+    }
+    
+    var newPosCoords = json.position.coords;
+//    console.log("update position for "+this.id +" to "+newPosCoords);
+    this.setPosition(newPosCoords[0],newPosCoords[1]);
+//    	this.position.fromJSON(json.position);
+//    	this.updatePosition();
+    
+    /* compute rotation difference , then rotate */
+    var rotDif = json.rotation - this.rotation;
+    if(rotDif != 0){
+	this.rotate(rotDif);
+    }
+    
+    this.selectable = json.selectable;
+    
+    /* do something with parent and parts */
+};
+
+/**
  * Called when this object is added to the universe
  * 
  * @param universe
@@ -453,6 +543,10 @@ PhysicalObject.prototype.setPosition = function(x, y) {
 
 PhysicalObject.prototype.setVisible=function(visible){
     this.shape.visible = visible;
+};
+
+PhysicalObject.prototype.isVisible  = function(){
+    return (this.shape && this.shape.visible);
 };
 
 PhysicalObject.prototype.getPosition=function(){
@@ -567,9 +661,9 @@ PhysicalObject.prototype.determinePartPosition = function(part) {
  * Maps the parts on their ids
  */
 PhysicalObject.prototype.indexParts = function() {
-    this.parts.forEach(function(part) {
-	this.partsMap[part.id] = part;
-    }, this);
+//    this.parts.forEach(function(part) {
+//	this.partsMap[part.id] = part;
+//    }, this);
 };
 
 /**
@@ -600,7 +694,7 @@ PhysicalObject.prototype.addPart = function(part, relPos) {
     /* add the part to the universe if not added yet */
     if (!part.id && !!this.universe) {
 	this.universe.addObject(part);
-	this.partsMap[part.id] = part;
+//	this.partsMap[part.id] = part;
     }
 
     /* if the part doesn't have a position, copy the position of the parent */
@@ -684,6 +778,8 @@ function Universe(dimensions, canvasElem) {
     this.objectsIndex = 0;
     this.intervalId;
     this.scale = [ 1, 1 ];
+    
+    this.objectsMap = {};
 
     this.init(canvasElem);
 
@@ -866,11 +962,12 @@ Universe.prototype.addObject = function(object) {
 
     this.objects.push(object);
     this.pointsObjects[object.position.coords] = object;
+    this.objectsMap[object.id] = object;
     // console.log("Added object " + object.id + " at pos "
     // + object.position.coords);
     /* make the object aware that it has been added to the universe */
     object.onAttach(this);
-    console.log("Added object "+object.id);
+//    console.log("Added object "+object.id);
 };
 
 Universe.prototype.removeObject = function(object) {
@@ -885,14 +982,21 @@ Universe.prototype.removeObject = function(object) {
 	object.removePart(p,true);
     });
     
+    delete this.objectsMap[object.id];
+    
     object.onDettach(this);
-     console.log("Removed object " + object.id + " at post "
-     + object.position.coords);
+//     console.log("Removed object " + object.id + " at post "
+//     + object.position.coords);
 };
 
 Universe.prototype.getObjectByCoords = function(coords) {
     return this.pointsObjects[coords];
 };
+
+Universe.prototype.getObjectById=function(id){
+    return this.objectsMap[id];
+};
+
 
 Universe.prototype.getHitObject = function(mouseX, mouseY) {
     for (var i = 0; i < this.objects.length; i++) {
@@ -922,7 +1026,7 @@ Simulator.prototype.run = function() {
 };
 
 PhysicalObject.prototype.constructor = PhysicalObject;
-Point.prototype.constructor = Point;
+
 Shape.prototype.constructor = Shape;
 Universe.prototype.constructor = Universe;
 Simulator.prototype.constructor = Simulator;

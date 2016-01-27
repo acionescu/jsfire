@@ -1,0 +1,1 @@
+CONTEXT.selectedPcb.fromJSON(savedPcbData);

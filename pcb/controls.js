@@ -438,3 +438,17 @@ onkeyup = function(evt){
 };
 
 universe.interactionHandler = new PCBActionHandler();
+
+
+var comandManager = {
+	
+	onSave : function(){
+//	    console.log(JSON.stringify(tip127_1));
+	    var url = 'data:text/json;charset=utf8,' + encodeURIComponent("var savedPcbData="+JSON.stringify(CONTEXT.selectedPcb));
+	    window.open(url, '_blank');
+	    window.focus();
+	}
+};
+
+
+

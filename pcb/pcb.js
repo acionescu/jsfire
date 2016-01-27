@@ -10,6 +10,13 @@ function ElectronicElement(label) {
 
 }
 
+ElectronicElement.prototype = new ElectronicElement();
+ElectronicElement.prototype.constructor = ElectronicElement;
+
+ElectronicElement.prototype.fromJSON=function(json){
+  this.footprint.fromJSON(json.footprint);  
+};
+
 function Footprint(position, shape) {
     PhysicalObject.call(this, position, shape);
 }
@@ -17,20 +24,6 @@ function Footprint(position, shape) {
 Footprint.prototype = new PhysicalObject();
 Footprint.prototype.constructor = Footprint;
 
-/**
- * The representation of of a specific physical component
- */
-function ElectronicComponent(label) {
-    ElectronicElement.call(this, label);
-    /* a component can have more terminals */
-    this.terminals = [];
-
-    /* a component can have internal connections between terminals */
-    this.connections = [];
-
-    /* allow mappings to a specific device */
-    this.deviceMappings = {};
-}
 
 /**
  * The representation of the abstraction of an electronic device
@@ -113,12 +106,6 @@ ElectronicCircuit.prototype.createPCB = function() {
     return pcb;
 };
 
-ElectronicElement.prototype = new ElectronicElement();
-ElectronicElement.prototype.constructor = ElectronicElement;
-
-ElectronicComponent.prototype = new ElectronicElement();
-ElectronicComponent.prototype.constructor = ElectronicComponent;
-
 ElectronicDevice.prototype = new ElectronicDevice();
 ElectronicDevice.prototype.constructor = ElectronicDevice;
 
@@ -140,6 +127,7 @@ function TracksManager() {
 
 TracksManager.prototype.constructor = TracksManager;
 
+
 /**
  * Returns a track point from a footprint
  * 
@@ -160,6 +148,59 @@ TracksManager.prototype.getTrackPoint = function(footprint, create) {
 TracksManager.prototype.removeTrackPoint = function(tp) {
     delete this.trackPoints[tp.footprint.id];
 };
+
+
+
+/**
+ * A point on a track where two or more paths meet It can also represent only an
+ * inflection point in a single path , or a terminal or any combination of the
+ * above
+ */
+function TrackPoint(footprint) {
+    /*
+     * a track point can be an arbitrary point or a terminal, if it's a terminal
+     * the footprint of that terminal needs to be passed
+     */
+    this.footprint = footprint;
+
+    this.parentPaths = [];
+    /*
+     * set it true if this is an auxiliary track point, needs to be false if
+     * this is a terminal
+     */
+    this.auxiliary;
+}
+
+TrackPoint.prototype = new TrackPoint();
+TrackPoint.prototype.constructor = TrackPoint;
+
+TrackPoint.prototype.toJSON = function(){
+    var json = {
+	footprintId : this.footprint.id,
+	auxiliary : this.auxiliary,
+	parentPathsIds : this.parentPaths.map(function(p){ return p.id; })
+    };
+    
+    /* if auxiliary add also the position as we won't be able to get it at restore for somewhere else */
+    if(this.auxiliary){
+	json.position = this.footprint.getPosition();
+	json.selectable=this.footprint.selectable;
+	json.visible =this.footprint.isVisible();
+    }
+    
+    return json;
+};
+
+
+TrackPoint.prototype.addToPath = function(path) {
+    this.parentPaths.push(path);
+};
+
+TrackPoint.prototype.removeFromPath = function(path) {
+    var index = this.parentPaths.indexOf(path);
+    this.parentPaths.splice(index, 1);
+};
+
 
 /**
  * The representation of a possible physical arrangement for an electronic
@@ -191,13 +232,55 @@ function PCB() {
 
     this.paths = new PhysicalObject();
     this.paths.selectable = false;
+    
+    this.auxPoints = new PhysicalObject();
+    this.auxPoints.selectable = false;
 
     this.addPart(this.paths);
+    this.addPart(this.auxPoints);
 
 }
 
 PCB.prototype = new PhysicalObject();
 PCB.prototype.constructor = PCB;
+
+PCB.prototype.toJSON=function(){
+    var json = PhysicalObject.prototype.toJSON.apply(this, arguments);
+    
+    json.components = this.components;
+    json.pathsArray = this.paths.parts;
+    json.tracksmanager = this.tracksManager;
+  
+    return json;
+};
+
+PCB.prototype.fromJSON = function(json){
+    
+    if(json == undefined){
+	console.log("No saved data found!");
+	return;
+    }
+    
+    PhysicalObject.prototype.fromJSON.apply(this,arguments);
+    
+    /* we expect the component to be in the exact same order */
+    
+    for(var i in json.components){
+	var saved = json.components[i];
+	var current = this.components[i];
+	
+	current.fromJSON(saved);
+    }
+    
+    
+    for(var i in json.pathsArray){
+	var sp = json.pathsArray[i];
+	var path = this.createNewPath();
+	console.log(path.pcb);
+	path.fromJSON(sp);
+    }
+    
+};
 
 PCB.prototype.addComponent = function(component) {
     this.components.push(component);
@@ -237,7 +320,7 @@ PCB.prototype.removePointFromPath = function(tp, path) {
     if (tp.parentPaths.length <= 0) {
 	this.tracksManager.removeTrackPoint(tp);
 	if (tp.auxiliary) {
-	    this.paths.removePart(tp.footprint, true);
+	    this.auxPoints.removePart(tp.footprint, true);
 	}
     }
 
@@ -253,7 +336,7 @@ PCB.prototype.removeTrackPoint = function(tp) {
 
     this.tracksManager.removeTrackPoint(tp);
     if (tp.auxiliary) {
-	this.paths.removePart(tp.footprint, true);
+	this.auxPoints.removePart(tp.footprint, true);
     }
 
 };
@@ -269,10 +352,10 @@ PCB.prototype.createNewTrackPoint = function(pos) {
     var handler = new Footprint();
     handler.shape = new Circle(1, '#ff0000');
     handler.setSelectable(false);
-    handler.setPosition(pos.coords[0], pos.coords[1]);
+   
     /* add the handler under the paths object */
-    this.paths.addPart(handler);
-    
+    this.auxPoints.addPart(handler);
+    handler.setPosition(pos.coords[0], pos.coords[1]);
 
     var tp = this.getTrackPoint(handler, true);
     tp.auxiliary = true;
@@ -293,6 +376,45 @@ function Path(pcb) {
 
 Path.prototype = new PhysicalObject();
 Path.prototype.constructor = Path;
+
+Path.prototype.toJSON=function(){
+    var json = PhysicalObject.prototype.toJSON.apply(this, arguments);
+    json.trackPoints = this.trackPoints;
+    json.pcbId = this.pcb.id;
+    
+    return json;
+};
+
+
+Path.prototype.fromJSON = function(json){
+    if(json == undefined){
+	return;
+    };
+    if(json.trackPoints == undefined){
+	return;
+    }
+    var self = this;
+    
+    json.trackPoints.forEach(function(stp){
+	/* see if a footprint with the specified id exists */
+	var footprint = self.universe.getObjectById(stp.footprintId);
+	
+	var tp;
+	if(footprint != undefined){
+	    tp = self.pcb.getTrackPoint(footprint,true);
+	}
+	/* if no footprint exists then we're dealing with an auxiliary point */
+	else{
+	    tp = self.pcb.createNewTrackPoint(stp.position);
+	    tp.footprint.setSelectable(stp.selectable);
+	    tp.footprint.setVisible(stp.visible);
+	    console.log("Create new point at pos "+tp.footprint.position.coords);
+	}
+	/* add the point to the path */
+	self.addTrackPoint(tp);
+    });
+};
+
 
 Path.prototype.addTrackPoint = function(trackPoint) {
     this.trackPoints.push(trackPoint);
@@ -381,37 +503,24 @@ Path.prototype.setComplete = function() {
     }
 };
 
-/**
- * A point on a track where two or more paths meet It can also represent only an
- * inflection point in a single path , or a terminal or any combination of the
- * above
- */
-function TrackPoint(footprint) {
-    /*
-     * a track point can be an arbitrary point or a terminal, if it's a terminal
-     * the footprint of that terminal needs to be passed
-     */
-    this.footprint = footprint;
 
-    this.parentPaths = [];
-    /*
-     * set it true if this is an auxiliary track point, needs to be false if
-     * this is a terminal
-     */
-    this.auxiliary;
+/**
+ * The representation of of a specific physical component
+ */
+function ElectronicComponent(label) {
+    ElectronicElement.call(this, label);
+    /* a component can have more terminals */
+    this.terminals = [];
+
+    /* a component can have internal connections between terminals */
+    this.connections = [];
+
+    /* allow mappings to a specific device */
+    this.deviceMappings = {};
 }
 
-TrackPoint.prototype = new PhysicalObject();
-TrackPoint.prototype.constructor = TrackPoint;
-
-TrackPoint.prototype.addToPath = function(path) {
-    this.parentPaths.push(path);
-};
-
-TrackPoint.prototype.removeFromPath = function(path) {
-    var index = this.parentPaths.indexOf(path);
-    this.parentPaths.splice(index, 1);
-};
+ElectronicComponent.prototype = new ElectronicElement();
+ElectronicComponent.prototype.constructor = ElectronicComponent;
 
 ElectronicComponent.prototype.addTerminal = function(terminal) {
     this.terminals.push(terminal);
