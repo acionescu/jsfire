@@ -1,6 +1,6 @@
 function DIL(pinsCount, label) {
     ElectronicComponent.call(this, label);
-    this.createTerminals(pinsCount, "p");
+    this.createTerminals(pinsCount, "p", 0.35);
 
     /* a quorter from the number of pins */
     var qp = pinsCount / 4;
@@ -8,7 +8,7 @@ function DIL(pinsCount, label) {
     for (var i = 0; i < pinsCount / 2; i++) {
 	var t = this.terminals[i];
 	t.footprint.shape = new Ellipse(PcbUtil.constants.dilTerminalXRadius,
-		PcbUtil.constants.dilTerminalYRadius, '#000000', '#000000');
+		PcbUtil.constants.dilTerminalYRadius, undefined, '#000000');
 	t.footprint.setRelativePos(PcbUtil.constants.dilXDif,
 		(i - qp) * 2.538 + 1);
     }
@@ -16,7 +16,7 @@ function DIL(pinsCount, label) {
     for (i = pinsCount; i > pinsCount / 2; i--) {
 	t = this.terminals[i - 1];
 	t.footprint.shape = new Ellipse(PcbUtil.constants.dilTerminalXRadius,
-		PcbUtil.constants.dilTerminalYRadius, '#000000', '#000000');
+		PcbUtil.constants.dilTerminalYRadius, undefined, '#000000');
 	t.footprint.setRelativePos(-PcbUtil.constants.dilXDif,
 		(pinsCount - i - qp) * 2.538 + 1);
     }
@@ -45,11 +45,11 @@ DiodeComp.prototype.constructor = DiodeComp;
 DiodeComp.prototype.init = function(device){
     
     var af = device.getAnode().footprint;
-    af.shape = PcbUtil.generators.LEDanodeFootprint();
+    af.shape = PcbUtil.generators.standardTerminalFootprint();
     af.setRelativePos(0, 5);
 
     var cf = device.getCathode().footprint;
-    cf.shape = PcbUtil.generators.LEDcathodeFootprint();
+    cf.shape = PcbUtil.generators.rectangleTerminalFootprint(2,2);
     cf.setRelativePos(0, -5);
     
 };
@@ -101,10 +101,16 @@ LED_5mm.prototype.init = function(device) {
     var af = device.getAnode().footprint;
    // af.shape = PcbUtil.generators.LEDanodeFootprint();
     af.setRelativePos(0, PcbUtil.constants.LEDDif);
+    af.shape = PcbUtil.generators.circleTerminalFootprint(0.85);
 
     var cf = device.getCathode().footprint;
-   // cf.shape = PcbUtil.generators.LEDcathodeFootprint();
+    cf.shape = PcbUtil.generators.LEDcathodeFootprint();
     cf.setRelativePos(0, -PcbUtil.constants.LEDDif);
+    
+    this.terminals.forEach(function(t){
+	
+	t.hole.setRadius(0.35);
+    });
 
     var shape = new Shape('#000000');
     shape.radX = 2.75;
@@ -290,9 +296,9 @@ function TO220(label) {
     this.terminals[2].footprint.shape = PcbUtil.generators
 	    .standardTerminalFootprint();
 
-    this.terminals[0].footprint.setRelativePos(-3, 1);
+    this.terminals[0].footprint.setRelativePos(-2.5, 1);
     this.terminals[1].footprint.setRelativePos(0, 1);
-    this.terminals[2].footprint.setRelativePos(3, 1);
+    this.terminals[2].footprint.setRelativePos(2.5, 1);
 
     this.footprint.shape = new Rectangle(10, 4);
 }
@@ -334,8 +340,8 @@ function ElectrolyticCapComp(label, fi, raster) {
     this.fi = fi;
     this.raster = raster;
 
-    this.addTerminal(new THT("A"));
-    this.addTerminal(new THT("C"));
+    this.addTerminal(new THT("A",new Hole(0.3)));
+    this.addTerminal(new THT("C",new Hole(0.3)));
 
     this.deviceMappings[DeviceTypes.CAPACITOR.N] = {
 	"A" : 0,
@@ -380,13 +386,13 @@ function CeramicCapComp(label, raster, w, h) {
 
     this.raster = raster;
 
-    this.addTerminal(new THT("1"));
-    this.addTerminal(new THT("2"));
+    this.addTerminal(new THT("1",new Hole(0.3)));
+    this.addTerminal(new THT("2",new Hole(0.3)));
 
     this.terminals[0].footprint.shape = PcbUtil.generators
-	    .standardTerminalFootprint();
+	    .circleTerminalFootprint(0.8);
     this.terminals[1].footprint.shape = PcbUtil.generators
-	    .standardTerminalFootprint();
+	    .circleTerminalFootprint(0.8);
 
     this.terminals[0].footprint.setRelativePos(-raster / 2, 0);
     this.terminals[1].footprint.setRelativePos(raster / 2, 0);
@@ -424,7 +430,7 @@ TO220Transistor.prototype.toDevice = function() {
     return new BipolarTransistor(this.label, this);
 };
 
-function TP92Comp(label) {
+function TO92Comp(label) {
     ElectronicComponent.call(this, label);
     this.createTerminals(3);
 
@@ -437,8 +443,8 @@ function TP92Comp(label) {
 	    .standardTerminalFootprint();
 
     this.terminals[1].footprint.setRelativePos(0, 0);
-    this.terminals[0].footprint.setRelativePos(-2, 0);
-    this.terminals[2].footprint.setRelativePos(2, 0);
+    this.terminals[0].footprint.setRelativePos(-2.5, 0);
+    this.terminals[2].footprint.setRelativePos(2.5, 0);
 
     var shape = new Shape('#000000');
     shape.radX = 2.1;
@@ -492,11 +498,11 @@ function TP92Comp(label) {
 }
 
 
-TP92Comp.prototype = new ElectronicComponent();
-TP92Comp.prototype.constructor = TP92Comp;
+TO92Comp.prototype = new ElectronicComponent();
+TO92Comp.prototype.constructor = TO92Comp;
 
 function TO92Transistor(label) {
-    TP92Comp.call(this, label);
+    TO92Comp.call(this, label);
 
     this.terminals[0].setLabel("C");
     this.terminals[1].setLabel("B");
@@ -510,7 +516,7 @@ function TO92Transistor(label) {
 
 }
 
-TO92Transistor.prototype = new TP92Comp();
+TO92Transistor.prototype = new TO92Comp();
 TO92Transistor.prototype.constructor = TO92Transistor;
 
 TO92Transistor.prototype.toDevice = function() {

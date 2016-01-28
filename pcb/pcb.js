@@ -229,6 +229,9 @@ function PCB() {
     };
 
     this.tracksManager = new TracksManager();
+    
+    this.componentsLayer = new PhysicalObject();
+    this.componentsLayer.selectable=false;
 
     this.paths = new PhysicalObject();
     this.paths.selectable = false;
@@ -237,6 +240,7 @@ function PCB() {
     this.auxPoints.selectable = false;
 
     this.addPart(this.paths);
+    this.addPart(this.componentsLayer);
     this.addPart(this.auxPoints);
 
 }
@@ -284,7 +288,8 @@ PCB.prototype.fromJSON = function(json){
 
 PCB.prototype.addComponent = function(component) {
     this.components.push(component);
-    this.addPart(component.footprint);
+//    this.addPart(component.footprint);
+    this.componentsLayer.addPart(component.footprint);
 };
 
 PCB.prototype.addTrack = function(track) {
@@ -368,10 +373,15 @@ function Path(pcb) {
     /* a path is actually a sequence of track points */
     this.trackPoints = [];
     this.pcb = pcb;
-    this.shape = new CustomShape();
-    this.shape.strokeColor = '#ff0000';
+    
+  
 
     this.selectable = false;
+    /* the width of the track in millimeters */
+    this.width=1;
+    this.shape = new CustomShape();
+    this.shape.lineWidth = this.width;
+    this.shape.strokeColor = '#ff0000';
 }
 
 Path.prototype = new PhysicalObject();
@@ -381,6 +391,7 @@ Path.prototype.toJSON=function(){
     var json = PhysicalObject.prototype.toJSON.apply(this, arguments);
     json.trackPoints = this.trackPoints;
     json.pcbId = this.pcb.id;
+    json.width = this.width;
     
     return json;
 };
@@ -395,6 +406,8 @@ Path.prototype.fromJSON = function(json){
     }
     var self = this;
     
+    this.setWidth(json.width);
+    
     json.trackPoints.forEach(function(stp){
 	/* see if a footprint with the specified id exists */
 	var footprint = self.universe.getObjectById(stp.footprintId);
@@ -408,11 +421,20 @@ Path.prototype.fromJSON = function(json){
 	    tp = self.pcb.createNewTrackPoint(stp.position);
 	    tp.footprint.setSelectable(stp.selectable);
 	    tp.footprint.setVisible(stp.visible);
-	    console.log("Create new point at pos "+tp.footprint.position.coords);
 	}
 	/* add the point to the path */
 	self.addTrackPoint(tp);
     });
+    
+    this.setComplete();
+};
+
+Path.prototype.setWidth = function(width){
+    if(width == undefined || width <= 0){
+	return;
+    }
+    this.width = width;
+    this.shape.lineWidth = width;
 };
 
 
@@ -501,6 +523,7 @@ Path.prototype.setComplete = function() {
     for (var i = 1; i < this.trackPoints.length; i++) {
 	this.trackPoints[i].footprint.setSelectable(true);
     }
+    this.shape.strokeColor='#000000';
 };
 
 
@@ -534,13 +557,13 @@ ElectronicComponent.prototype.addInternalConnection = function(connection) {
     this.connections.push(connection);
 };
 
-ElectronicComponent.prototype.createTerminals = function(count, terminalPrefix) {
+ElectronicComponent.prototype.createTerminals = function(count, terminalPrefix, radius) {
     if (terminalPrefix == undefined) {
 	terminalPrefix = "t";
     }
 
     for (var i = 0; i < count; i++) {
-	var t = new THT(terminalPrefix + (i + 1));
+	var t = new THT(terminalPrefix + (i + 1),new Hole(radius));
 	this.addTerminal(t);
     }
 };
@@ -592,7 +615,7 @@ function THT(label, hole) {
     if (hole != undefined) {
 	this.hole = hole;
     } else {
-	/* by default use a circle hole with the diameter of one ( radius 0.5 ) */
+	
 	this.hole = new Hole(0.5);
     }
 
@@ -603,18 +626,26 @@ THT.prototype.constructor = THT;
 
 function Hole(radius) {
     Footprint.call(this);
-    this.shape = new Circle(radius, '#000000', '#ffffff');
+    if(!radius){
+	/* by default use a circle hole with the diameter of one ( radius 0.5 ) */
+	radius = 0.5;
+    }
+    this.shape = new Circle(radius, undefined, '#ffffff');
 }
 
 Hole.prototype = new Footprint();
 Hole.prototype.constructor = Hole;
+
+Hole.prototype.setRadius=function(radius){
+    this.shape = new Circle(radius, undefined, '#ffffff');
+};
 
 this.PcbUtil = this.PcbUtil || {
     constants : {},
     generators : {}
 };
 
-PcbUtil.constants.standardTerminalRadius = 0.8;
+PcbUtil.constants.standardTerminalRadius = 1;
 
 PcbUtil.constants.dilTerminalXRadius = 1;
 PcbUtil.constants.dilTerminalYRadius = 0.75;
@@ -624,21 +655,25 @@ PcbUtil.constants.dilXDif = 3.75;
 PcbUtil.constants.LEDDif = 1;
 
 PcbUtil.generators.LEDanodeFootprint = function() {
-    return new Circle(PcbUtil.constants.standardTerminalRadius, '#000000',
+    return new Circle(0.8, undefined,
 	    '#000000');
 };
 
 PcbUtil.generators.LEDcathodeFootprint = function() {
-    return new Rectangle(1.25, 1.25, '#000000', '#000000');
+    return new Rectangle(1.5, 1.5, undefined, '#000000');
 };
 
 PcbUtil.generators.standardTerminalFootprint = function() {
-    return new Circle(PcbUtil.constants.standardTerminalRadius, '#000000',
+    return new Circle(PcbUtil.constants.standardTerminalRadius, undefined,
 	    '#000000');
 };
 
 PcbUtil.generators.circleTerminalFootprint = function(radius) {
-    return new Circle(radius, '#000000', '#000000');
+    return new Circle(radius, undefined, '#000000');
 };
 
-console.log(PcbUtil);
+PcbUtil.generators.rectangleTerminalFootprint = function(w,h) {
+    return new Rectangle(w, h, undefined, '#000000');
+};
+
+

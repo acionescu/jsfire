@@ -447,6 +447,26 @@ var comandManager = {
 	    var url = 'data:text/json;charset=utf8,' + encodeURIComponent("var savedPcbData="+JSON.stringify(CONTEXT.selectedPcb));
 	    window.open(url, '_blank');
 	    window.focus();
+	},
+	exportToImage : function(){
+	    var newCanvas = document.createElement('canvas');
+	    var context = newCanvas.getContext('2d');
+	    
+	    newCanvas.width = 2048;
+	    newCanvas.height = 2048;
+	    
+	    var c = document.getElementById("commSimCanvas");
+	   
+	    universe.canvas = context;
+	    var prevScale = universe.scale;
+	    universe.scale = [15,15];
+	    universe.update();
+	    universe.scale = prevScale;
+	    universe.canvas = c.getContext('2d');
+	    
+	    
+	    window.open(newCanvas.toDataURL(),'_blak');
+	    window.focus();
 	}
 };
 

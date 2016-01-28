@@ -109,7 +109,9 @@ stc.addConnection(vccConn);
 var pcb1 = stc.createPCB();
 
 universe.setScale([ 4.7, 4.7 ]);
-pcb1.shape = new Rectangle(50, 70);
+pcb1.shape = new Rectangle(50, 70,'#000000');
+//pcb1.shape.strokeColor=undefined;
+console.log(pcb1.shape.strokeColor);
 pcb1.setPosition(70, 60);
 pcb1.selectable = false;
 

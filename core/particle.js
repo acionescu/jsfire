@@ -169,13 +169,12 @@ function Shape(strokeColor, fillColor) {
      */
     this.visible = true;
 
-    this.fillColor;
-    if (fillColor) {
-	this.fillColor = fillColor;
-    }
-    this.strokeColor = '#000000';
-    if (strokeColor) {
-	this.strokeColor = strokeColor;
+    this.fillColor=fillColor;
+    
+    this.strokeColor=strokeColor;
+     if(this.fillColor==undefined && this.strokeColor == undefined){
+	/* use a default stroke color only if no fillColor or strokeColor have been specified */
+	this.strokeColor='#000000';
     }
     /* store the last absolute position where it was drawn, including scaling */
     this.absolutePos;
@@ -299,7 +298,7 @@ Ellipse.prototype.compute = function(position, scale, rotation){
 };
 
 Ellipse.prototype.draw = function(canvas, position, scale, rotation) {
-    this.compute(position, scale,rotation );
+    Ellipse.prototype.compute.apply(this,[position, scale,rotation] );
     
     canvas.beginPath();
     
@@ -316,6 +315,7 @@ Ellipse.prototype.draw = function(canvas, position, scale, rotation) {
 	canvas.strokeStyle = this.strokeColor;
 	canvas.stroke();
     }
+   
 
     // console.log("draw circle "+this.radius);
 };
@@ -352,6 +352,10 @@ function CustomShape(points) {
     if(!this.points){
 	this.points=[];
     }
+    
+    this.lineWidth = 1;
+    this.lineJoin = "bevel";
+    this.lineCap = "round";
 }
 
 CustomShape.prototype = new Shape();
@@ -376,6 +380,7 @@ CustomShape.prototype.draw = function(canvas, position, scale, rotation) {
     }
 
     canvas.beginPath();
+    
 
     var pc = position.coords;
 
@@ -398,6 +403,9 @@ CustomShape.prototype.draw = function(canvas, position, scale, rotation) {
 
     if (this.strokeColor) {
 	canvas.strokeStyle = this.strokeColor;
+	canvas.lineWidth = this.lineWidth*scale[0];
+	canvas.lineJoin = this.lineJoin;
+	canvas.lineCap =this.lineCap;
 	canvas.stroke();
     }
 };
@@ -419,6 +427,9 @@ function PhysicalObject(position, shape, mass) {
 
     /* rotation of the object in radians */
     this.rotation = 0;
+    
+    /* how many ancestor does this object has */
+    this.level=0;
 
     /* an object to store view data */
     this.view = {};
@@ -678,9 +689,22 @@ PhysicalObject.prototype.compute = function(universe) {
 };
 
 PhysicalObject.prototype.draw = function(canvas, scale) {
+   
     if (this.shape && this.shape.visible) {
 	this.shape.draw(canvas, this.position, scale, this.rotation);
     }
+};
+
+PhysicalObject.prototype.drawWithParts=function(canvas,scale){
+    /*  draw itself */
+    this.draw(canvas,scale);
+    this.universe.resetDrawSettings(canvas);
+    
+    /* draw parts  */
+    this.parts.forEach(function(part) {
+	part.drawWithParts(canvas,scale);
+    });
+   
 };
 
 /**
@@ -691,34 +715,37 @@ PhysicalObject.prototype.draw = function(canvas, scale) {
  *                relative position of the part to the parent
  */
 PhysicalObject.prototype.addPart = function(part, relPos) {
+    if(part.parent){
+	throw "Part "+part.id+" already has a parent: "+part.parent.id;
+    }
+    
+    this.parts.push(part);
+    part.parent = this;
+    
     /* add the part to the universe if not added yet */
     if (!part.id && !!this.universe) {
+	
+	    /* if the part doesn't have a position, copy the position of the parent */
+	    if (!!relPos) {
+		part.relPos = relPos;
+	    }
+
+	    this.determinePartPosition(part);
+	
+	
 	this.universe.addObject(part);
 //	this.partsMap[part.id] = part;
     }
 
-    /* if the part doesn't have a position, copy the position of the parent */
-    if (!!relPos) {
-	part.relpos = relPos;
-    }
 
-    // /* adjust part scale */
-    // if(!part.scale){
-    // throw "scale undefined";
-    // }
-    //    
-    // part.setScale([part.scale[0]*this.scale[0],part.scale[1]*this.scale[1]]);
 
-    this.determinePartPosition(part);
-
-    this.parts.push(part);
-    part.parent = this;
+    
 
 };
 
 PhysicalObject.prototype.removePart = function(part,removeFromUniverse) {
     var partIndex = this.parts.indexOf(part);
-    delete this.parts[partIndex];
+    this.parts.splice(partIndex, 1);
     delete this.partsMap[part.id];
     part.parent = undefined;
     if(removeFromUniverse){
@@ -780,10 +807,17 @@ function Universe(dimensions, canvasElem) {
     this.scale = [ 1, 1 ];
     
     this.objectsMap = {};
+    
+    /* 2 dimensions array storing objects organized by the number of ancestors */
+    this.byLevel=[[]];
 
     this.init(canvasElem);
 
     this.interactionHandler;
+    
+    this.defaultDrawSettings = {
+	    lineWidth : 1
+    };
 }
 
 Universe.prototype.init = function(canvasElem) {
@@ -945,10 +979,20 @@ Universe.prototype.compute = function() {
 
 Universe.prototype.draw = function(canvas) {
     canvas.clearRect(0, 0, canvas.width, canvas.height);
-    for (var i = 0; i < this.objects.length; i++) {
-	this.objects[i].draw(canvas, this.scale);
-    }
-    ;
+    
+//    for (var i = 0; i < this.objects.length; i++) {
+//	this.objects[i].draw(canvas, this.scale);
+//	this.resetDrawSettings(canvas);
+//    }
+    var self = this;
+    this.byLevel[0].forEach(function(obj){
+	console.log("draw top level "+obj.id);
+	obj.drawWithParts(canvas,self.scale);
+    });
+};
+
+Universe.prototype.resetDrawSettings = function(canvas){
+    canvas.lineWidth = this.defaultDrawSettings.lineWidth;
 };
 
 Universe.prototype.addObject = function(object) {
@@ -963,12 +1007,29 @@ Universe.prototype.addObject = function(object) {
     this.objects.push(object);
     this.pointsObjects[object.position.coords] = object;
     this.objectsMap[object.id] = object;
+    
+    if(object.parent){
+	object.level = object.parent.level+1;
+    }
+    else{
+	object.level=0;
+    }
+    
+    var levelArray = this.byLevel[object.level];
+    if(levelArray == undefined){
+	levelArray = [];
+	this.byLevel[object.level]=levelArray;
+    }
+    levelArray.push(object);
+    
     // console.log("Added object " + object.id + " at pos "
     // + object.position.coords);
     /* make the object aware that it has been added to the universe */
     object.onAttach(this);
 //    console.log("Added object "+object.id);
 };
+
+
 
 Universe.prototype.removeObject = function(object) {
     var objIndex = this.objects.indexOf(object);
@@ -983,6 +1044,8 @@ Universe.prototype.removeObject = function(object) {
     });
     
     delete this.objectsMap[object.id];
+    var byLevelIndex = this.byLevel[object.level].indexOf(object);
+    this.byLevel[object.level].splice(byLevelIndex,1);
     
     object.onDettach(this);
 //     console.log("Removed object " + object.id + " at post "
