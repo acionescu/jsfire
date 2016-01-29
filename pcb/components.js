@@ -72,7 +72,7 @@ StandingDiodeComp.prototype.init = function(device){
 
     var cf = device.getCathode().footprint;
    // cf.shape = PcbUtil.generators.LEDcathodeFootprint();
-    cf.setRelativePos(0, -2.5);
+    cf.setRelativePos(0, -3);
     
     var shape = new Ellipse(1.25,1.25,'#000000');
     

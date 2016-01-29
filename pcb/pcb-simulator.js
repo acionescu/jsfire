@@ -52,6 +52,13 @@ var d2 = new StandingDiodeComp("d2").toDevice();
 var d3 = new StandingDiodeComp("d3").toDevice();
 var d4 = new StandingDiodeComp("d4").toDevice();
 
+
+var sensRes1 = new Resistance_Quorter_Watt("sensRes1").toDevice();
+var sensRes2 = new Resistance_Quorter_Watt("sensRes2").toDevice();
+
+var ldr1 = new Resistance_Quorter_Watt("ldr1").toDevice();
+var ldr2 = new Resistance_Quorter_Watt("ldr2").toDevice();
+
 stc.addDevice(ic1);
 stc.addDevice(led1);
 stc.addDevice(led_R);
@@ -93,6 +100,11 @@ stc.addDevice(d2);
 stc.addDevice(d3);
 stc.addDevice(d4);
 
+stc.addDevice(sensRes1);
+stc.addDevice(sensRes2);
+stc.addDevice(ldr1);
+stc.addDevice(ldr2);
+
 /* connections */
 
 var gndConn = new Connection([ supply.getGnd(), cap033uF.getCathode(),
@@ -130,7 +142,7 @@ pushb.comp.footprint.setRelativePos(18, 2);
 
 supply.comp.footprint.setRelativePos(20, -25);
 
-motorOut.comp.footprint.setRelativePos(20, 20);
+motorOut.comp.footprint.setRelativePos(20, 25);
 
 l7812.comp.footprint.rotate(-Math.PI / 2);
 l7812.comp.footprint.setRelativePos(2, -29);
@@ -193,6 +205,8 @@ d3.comp.footprint.rotate(Math.PI);
 d3.comp.footprint.setRelativePos(9, 22);
 
 d4.comp.footprint.setRelativePos(-5.5, 23);
+
+ldr1.comp.footprint.setRelativePos(18,-10);
 
 for ( var i in pcb1.components) {
     var c = pcb1.components[i];

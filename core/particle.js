@@ -745,6 +745,7 @@ PhysicalObject.prototype.addPart = function(part, relPos) {
 
 PhysicalObject.prototype.removePart = function(part,removeFromUniverse) {
     var partIndex = this.parts.indexOf(part);
+    console.log('removing part '+part);
     this.parts.splice(partIndex, 1);
     delete this.partsMap[part.id];
     part.parent = undefined;

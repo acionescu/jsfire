@@ -29,6 +29,33 @@
 	position : absolute;
 	bottom : 20;
 	}
+	
+#controlsBase {
+	display :none;
+}	
+
+#global-flags{
+	padding-bottom: 10px;
+}
+
+.currentControls {
+	width: 100%;
+	padding-top: 20px;
+}
+
+.currentControls  label{
+	
+	display: inline-block;
+	width : 100px;
+	height: 25px;
+} 
+
+.currentControls  input{
+	
+	float:right;
+	display: inline-block;
+} 
+
 </style>
 
 </head>
@@ -41,14 +68,34 @@
 Tool:
 		<select name="Tools" id="toolSelector">
 			<option value="Move">Move</option>
-			<option value="Rotate">Rotate</option>
+<!-- 			<option value="Rotate">Rotate</option> -->
 			<option value="PathBuilder">Path Builder</option>
 			
 		</select>
 		
+		<div id="currentControls" ></div>
+		
 		<div id="global-commands">
+		<div id="global-flags">
+			 <label>Show components</label><input type="checkbox" checked="checked" onclick="comandManager.showComponents(this)">
+		</div>
 			<button onclick="comandManager.onSave()">Save</button>
 			<button onclick="comandManager.exportToImage()">To Image</button>
+		</div>
+		
+		<div id="controlsBase">
+			<div id="Move-Controls">
+				<form>
+				  	  <label>Selected:</label><input type="text" readonly="readonly" name="selComp"/>
+					  <label>X:</label><input type="number" name="xpos"/>
+					  <label>Y:</label><input type="number" name="ypos"/> 
+				</form>
+			</div>
+			<div id="PathBuilder-Controls">
+				<form>
+					<label>Width:</label><input type="number" name="pathwidth"/>
+				</form>
+			</div>
 		</div>
 	</div>
 	

@@ -6,6 +6,17 @@ function createGuid() {
 }
 
 
+function copyDiv(sourceId,destId){
+    var firstDivContent = document.getElementById(sourceId);
+    var secondDivContent = document.getElementById(destId);
+    if(firstDivContent && secondDivContent){
+	secondDivContent.innerHTML = firstDivContent.innerHTML;
+    }
+    else if(secondDivContent){
+	secondDivContent.innerHTML="";
+    }
+  }
+
 
 /**
  * Handles the user interaction with the objects in the {@link Universe}

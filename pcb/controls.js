@@ -87,17 +87,67 @@ Tool.prototype.onDeselection =function(){
     
 };
 
+/**
+ * Called when the custom controls provided by this tool are changed
+ */
+Tool.prototype.onControlsChange=function(evt){
+    
+};
+
 
 function MoveTool(){
-    
+    this.selectedObj;
 }
 
 MoveTool.prototype = new Tool();
 MoveTool.prototype.constructor = MoveTool;
 
+MoveTool.prototype.onSelection =function(){
+    this.selectedObj=undefined;
+};
+
+MoveTool.prototype.onDeselection =function(){
+    
+};
 
 MoveTool.prototype.onObjectDrag=function(obj, universe, mousePos){
     obj.setPosition(mousePos.coords[0], mousePos.coords[1]);
+    this.populateControls(obj);
+};
+
+MoveTool.prototype.onObjectClick=function(obj, universe, mousePos){
+    this.populateControls(obj);
+    if(this.isCtrlDown()){
+	obj.rotate(Math.PI/2);
+    }
+};
+
+MoveTool.prototype.populateControls=function(obj){
+    var form = getControlsForm();
+    if(!form){
+	return;
+    }
+   
+    form.selComp.value = obj.element.label;
+    
+    var relPos = obj.getRelativePos();
+    
+    form.xpos.value = relPos.coords[0];
+    form.ypos.value = relPos.coords[1];
+    
+    this.selectedObj=obj;
+    
+};
+
+MoveTool.prototype.onControlsChange=function(evt){
+   if(this.selectedObj){
+       var form = evt.target.form;
+       console.log(form.xpos.value);
+       console.log(form.ypos.value);
+       this.selectedObj.setRelativePos(parseFloat(form.xpos.value),parseFloat(form.ypos.value));
+       
+       universe.update();
+   }
 };
 
 
@@ -116,10 +166,28 @@ RotateTool.prototype.onObjectClick=function(obj, universe, mousePos){
 function PathBuilderTool(){
     this.currentPath;
     this.mouseMoveListener;
+    
+    this.pathWidth=0.5;
+    
 }
 
 PathBuilderTool.prototype = new Tool();
 PathBuilderTool.prototype.constructor = PathBuilderTool;
+
+PathBuilderTool.prototype.populateControls=function(){
+    var form = getControlsForm();
+    if(!form){
+	return;
+    }
+   
+    form.pathwidth.value = this.pathWidth;
+    
+};
+
+PathBuilderTool.prototype.onControlsChange=function(evt){
+       var form = evt.target.form;
+       this.pathWidth=parseFloat(form.pathwidth.value);
+};
 
 PathBuilderTool.prototype.onSelection=function(){
     /* work only with terminals, so make components unselectable */
@@ -129,6 +197,9 @@ PathBuilderTool.prototype.onSelection=function(){
     });
     
     CONTEXT.selectedPcb.selectable = false;
+    
+    this.pathWidth=0.5;
+    this.populateControls();
 };
 
 PathBuilderTool.prototype.onDeselection=function(){
@@ -168,7 +239,7 @@ PathBuilderTool.prototype.onObjectClick=function(obj, universe, mousePos){
     
     /* if no current path exists then we must be starting one right here */
     if(this.currentPath == undefined){
-	this.currentPath = CONTEXT.selectedPcb.createNewPath();
+	this.currentPath = CONTEXT.selectedPcb.createNewPath(this.pathWidth);
 	
 	
 	/* get a track point for the starting point */
@@ -350,13 +421,42 @@ var toolMappings = {
 };
 
 
+function getControlsForm(){
+    var controlsDiv = document.getElementById("currentControls");
+    
+    var currentForm = controlsDiv.getElementsByTagName("form")[0];
+    
+    return currentForm;
+}
+
+
 function updateSelectedTool(){
     
     var toolId = document.getElementById("toolSelector").selectedOptions[0].value;
     
+    /* clean up the old controls form */
+    var controlsDiv = document.getElementById("currentControls");
+    
+    var currentForm = controlsDiv.getElementsByTagName("form")[0];
+    if(currentForm){
+	console.log("remove listener on form "+currentForm);
+	currentForm.removeEventListener("change",comandManager.controlsChange);
+    }
+    
     if(CONTROLS.selectedTool != undefined){
 	CONTROLS.selectedTool.onDeselection();
     }
+    
+    /* first activate controls for the new tool */
+    copyDiv(toolId+"-Controls","currentControls");
+    controlsDiv.className="currentControls";
+    
+    /* the new form */
+    currentForm = controlsDiv.getElementsByTagName("form")[0];
+    currentForm.addEventListener("change",comandManager.controlsChange);
+    /* prevent the form to reload the page on submit */
+    currentForm.onsubmit = function(){return false;};
+    
     
     /* initialize current tool */
     CONTROLS.selectedTool = toolMappings[toolId];
@@ -371,7 +471,6 @@ document.getElementById("toolSelector").onchange = function(evt){
     updateSelectedTool();
 };
 
-updateSelectedTool();
 
 
 /**
@@ -440,6 +539,10 @@ onkeyup = function(evt){
 universe.interactionHandler = new PCBActionHandler();
 
 
+
+
+
+
 var comandManager = {
 	
 	onSave : function(){
@@ -467,8 +570,19 @@ var comandManager = {
 	    
 	    window.open(newCanvas.toDataURL(),'_blak');
 	    window.focus();
+	},
+	
+	showComponents : function(checkbox){
+	    
+	    CONTEXT.selectedPcb.setComponentsVisible(checkbox.checked);
+	    universe.update();
+	}
+	,
+	controlsChange:function(evt){
+	    
+	    CONTROLS.selectedTool.onControlsChange(evt);
 	}
 };
-
-
+console.log("start");
+updateSelectedTool();
 

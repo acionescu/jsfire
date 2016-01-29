@@ -7,6 +7,7 @@ function ElectronicElement(label) {
 
     /* a footprint on a pcb */
     this.footprint = new Footprint();
+    this.footprint.element = this;
 
 }
 
@@ -19,6 +20,8 @@ ElectronicElement.prototype.fromJSON=function(json){
 
 function Footprint(position, shape) {
     PhysicalObject.call(this, position, shape);
+    /* the element that has this footprint */
+    this.element;
 }
 
 Footprint.prototype = new PhysicalObject();
@@ -280,7 +283,7 @@ PCB.prototype.fromJSON = function(json){
     for(var i in json.pathsArray){
 	var sp = json.pathsArray[i];
 	var path = this.createNewPath();
-	console.log(path.pcb);
+	
 	path.fromJSON(sp);
     }
     
@@ -317,6 +320,7 @@ PCB.prototype.addPath = function(path) {
 };
 
 PCB.prototype.removePath = function(path) {
+    path.clean();
     this.paths.removePart(path, true);
 };
 
@@ -346,8 +350,8 @@ PCB.prototype.removeTrackPoint = function(tp) {
 
 };
 
-PCB.prototype.createNewPath = function() {
-    var path = new Path(this);
+PCB.prototype.createNewPath = function(width) {
+    var path = new Path(this,width);
     this.addPath(path);
 
     return path;
@@ -369,7 +373,7 @@ PCB.prototype.createNewTrackPoint = function(pos) {
 };
 
 /* The symbolic representation of a one to one connection */
-function Path(pcb) {
+function Path(pcb,width) {
     /* a path is actually a sequence of track points */
     this.trackPoints = [];
     this.pcb = pcb;
@@ -378,7 +382,10 @@ function Path(pcb) {
 
     this.selectable = false;
     /* the width of the track in millimeters */
-    this.width=1;
+    this.width=width;
+    if(!this.width){
+	this.width=0.5;
+    }
     this.shape = new CustomShape();
     this.shape.lineWidth = this.width;
     this.shape.strokeColor = '#ff0000';
@@ -460,17 +467,17 @@ Path.prototype.addTrackPoint = function(trackPoint) {
  * @param removeHandler -
  *                if true will remove the footprint too
  */
-Path.prototype.removeLastPoint = function(removeHandler) {
+Path.prototype.removeLastPoint = function() {
     // var tp = this.trackPoints.pop();
     // this.shape.points.pop();
     // if(removeHandler){
     // this.removePart(tp.footprint,true);
     // }
 
-    this.removePoint(this.trackPoints.length - 1, removeHandler);
+    this.removePoint(this.trackPoints.length - 1);
 };
 
-Path.prototype.removePoint = function(index, removeHandler) {
+Path.prototype.removePoint = function(index) {
     var tp = this.trackPoints.splice(index, 1)[0];
     this.shape.points.splice(index, 1);
     this.pcb.removePointFromPath(tp, this);
@@ -524,6 +531,15 @@ Path.prototype.setComplete = function() {
 	this.trackPoints[i].footprint.setSelectable(true);
     }
     this.shape.strokeColor='#000000';
+};
+
+/**
+ * Will remove all points
+ */
+Path.prototype.clean = function(){
+    while(this.trackPoints.length > 0){
+	this.removeLastPoint();
+    };
 };
 
 
