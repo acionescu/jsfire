@@ -1,11 +1,45 @@
 function DIL(pinsCount, label) {
     ElectronicComponent.call(this, label);
-    this.createTerminals(pinsCount, "p", 0.35);
+    this.pinsCount = pinsCount;
+   
+    if(this.pinsCount){
+	this.initPins();
+    }
+    
 
+  
+}
+
+DIL.prototype = new ElectronicComponent();
+DIL.prototype.constructor = DIL;
+
+DIL.prototype.toJSON = function(){
+    var json = ElectronicComponent.prototype.toJSON.apply(this, arguments);
+    json.pinsCount = this.pinsCount;
+    console.log(this);
+    return json;
+};
+
+DIL.prototype.fromJSON=function(json){
+    if(json.pinsCount){
+	this.pinsCount = json.pinsCount;
+    }
+    if(this.terminals.length == 0){
+    	this.initPins();
+    }
+    ElectronicComponent.prototype.fromJSON.apply(this, arguments);
+   
+
+};
+
+DIL.prototype.initPins=function(){
+   
+    this.createTerminals(this.pinsCount, "p", 0.35);
+    
     /* a quorter from the number of pins */
-    var qp = pinsCount / 4;
+    var qp = this.pinsCount / 4;
 
-    for (var i = 0; i < pinsCount / 2; i++) {
+    for (var i = 0; i < this.pinsCount / 2; i++) {
 	var t = this.terminals[i];
 	t.footprint.shape = new Ellipse(PcbUtil.constants.dilTerminalXRadius,
 		PcbUtil.constants.dilTerminalYRadius, undefined, '#000000');
@@ -13,17 +47,15 @@ function DIL(pinsCount, label) {
 		(i - qp) * 2.538 + 1);
     }
 
-    for (i = pinsCount; i > pinsCount / 2; i--) {
+    for (i = this.pinsCount; i > this.pinsCount / 2; i--) {
 	t = this.terminals[i - 1];
 	t.footprint.shape = new Ellipse(PcbUtil.constants.dilTerminalXRadius,
 		PcbUtil.constants.dilTerminalYRadius, undefined, '#000000');
-	t.footprint.setRelativePos(-PcbUtil.constants.dilXDif,
-		(pinsCount - i - qp) * 2.538 + 1);
+	
+	t.footprint.setRelativePos(-PcbUtil.constants.dilXDif,(this.pinsCount - i - qp) * 2.538 + 1);
+	
     }
-}
-
-DIL.prototype = new ElectronicComponent();
-DIL.prototype.constructor = DIL;
+};
 
 /**
  * Generic diode component
@@ -43,6 +75,7 @@ DiodeComp.prototype = new ElectronicComponent();
 DiodeComp.prototype.constructor = DiodeComp;
 
 DiodeComp.prototype.init = function(device){
+    ElectronicComponent.prototype.init.apply(this,arguments);
     
     var af = device.getAnode().footprint;
     af.shape = PcbUtil.generators.standardTerminalFootprint();
@@ -352,7 +385,25 @@ function ElectrolyticCapComp(label, fi, raster) {
 ElectrolyticCapComp.prototype = new ElectronicComponent();
 ElectrolyticCapComp.prototype.constructor = ElectrolyticCapComp;
 
+
+
+ElectrolyticCapComp.prototype.toJSON = function(){
+    var json = ElectronicComponent.prototype.toJSON.apply(this,arguments);
+    json.fi = this.fi;
+    json.raster = this.raster;
+    
+    return json;
+};
+
+ElectrolyticCapComp.prototype.fromJSON=function(json){
+    this.fi = json.fi;
+    this.raster = json.raster;
+    ElectronicComponent.prototype.fromJSON.apply(this,arguments);
+};
+
+
 ElectrolyticCapComp.prototype.init = function(device) {
+    ElectronicComponent.prototype.init.apply(this,arguments);
 
     if (this.raster == undefined) {
 	throw "Raster not defined for " + this.label;
@@ -385,24 +436,55 @@ function CeramicCapComp(label, raster, w, h) {
     ElectronicComponent.call(this, label);
 
     this.raster = raster;
+    this.cw=w;
+    this.ch=h;
 
     this.addTerminal(new THT("1",new Hole(0.3)));
     this.addTerminal(new THT("2",new Hole(0.3)));
 
+   
+}
+
+CeramicCapComp.prototype = new ElectronicComponent();
+CeramicCapComp.prototype.constructor = CeramicCapComp;
+
+CeramicCapComp.prototype.toJSON = function(){
+    var json = ElectronicComponent.prototype.toJSON.apply(this,arguments);
+    json.raster = this.raster;
+    json.cw = this.cw;
+    json.ch = this.ch;
+    return json;
+};
+
+CeramicCapComp.prototype.fromJSON=function(json){
+    if(json.raster){
+	this.raster = json.raster;
+    }
+    if(json.cw){
+	this.cw = json.cw;
+    }
+    if(json.ch){
+	this.ch = json.ch;
+    }
+    ElectronicComponent.prototype.fromJSON.apply(this,arguments);
+};
+
+CeramicCapComp.prototype.init=function(device){
+    ElectronicComponent.prototype.init.apply(this,arguments);
+    
+    
     this.terminals[0].footprint.shape = PcbUtil.generators
 	    .circleTerminalFootprint(0.8);
     this.terminals[1].footprint.shape = PcbUtil.generators
 	    .circleTerminalFootprint(0.8);
 
-    this.terminals[0].footprint.setRelativePos(-raster / 2, 0);
-    this.terminals[1].footprint.setRelativePos(raster / 2, 0);
+    this.terminals[0].footprint.setRelativePos(-this.raster / 2, 0);
+    this.terminals[1].footprint.setRelativePos(this.raster / 2, 0);
 
-    this.footprint.shape = new Ellipse(w / 2, h / 2);
+    this.footprint.shape = new Ellipse(this.cw / 2, this.ch / 2);
 
-}
+};
 
-CeramicCapComp.prototype = new ElectronicComponent();
-CeramicCapComp.prototype.constructor = CeramicCapComp;
 
 CeramicCapComp.prototype.toDevice = function() {
     return new Capacitor(this.label, this);
@@ -554,3 +636,41 @@ QuartzCrystalHC49_S.prototype.constructor = QuartzCrystalHC49_S;
 QuartzCrystalHC49_S.prototype.toDevice = function() {
     return new QuartzCrystal(this.label, this);
 };
+
+
+function Via(id,label,radius){
+    ElectronicComponent.call(this, label);
+    this.id=id;
+    this.radius = radius;
+    if(!this.radius){
+	this.radius =1;
+    }
+    
+    this.addTerminal(new THT(label,new Hole()));
+    
+    this.terminals[0].footprint.shape = PcbUtil.generators.standardTerminalFootprint();
+    
+    var shape = new Shape(undefined,'#ff0000');
+    shape.radius = 5;
+    shape.radX = 5;
+    shape.radY=5;
+    var self = this;
+    
+    shape.draw=function(canvas, position, scale, rotation){
+	var coords = position.coords;
+//	Circle.prototype.draw.apply(this,arguments);
+	this.absolutePos = new Point([ scale[0] * coords[0], scale[1] * coords[1] ]);
+	canvas.beginPath();
+	
+	 if (this.fillColor) {
+		canvas.fillStyle = this.fillColor;
+		canvas.fillText(id,scale[0] * (coords[0]+self.radius),scale[1] * (coords[1]+2*self.radius)) ;
+	 }
+    };
+    
+    this.footprint.shape = shape;
+}
+
+Via.prototype = new ElectronicComponent();
+Via.prototype.constructor = Via;
+

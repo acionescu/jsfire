@@ -14,8 +14,21 @@ function ElectronicElement(label) {
 ElectronicElement.prototype = new ElectronicElement();
 ElectronicElement.prototype.constructor = ElectronicElement;
 
+
+ElectronicElement.prototype.toJSON = function(){
+   
+    return {
+	label : this.label,
+	footprint : this.footprint,
+	_class : this.__proto__.constructor.name
+    };
+};
+
 ElectronicElement.prototype.fromJSON=function(json){
+  this.label = json.label;
   this.footprint.fromJSON(json.footprint);  
+  this.footprint.element = this;
+  
 };
 
 function Footprint(position, shape) {
@@ -27,31 +40,6 @@ function Footprint(position, shape) {
 Footprint.prototype = new PhysicalObject();
 Footprint.prototype.constructor = Footprint;
 
-
-/**
- * The representation of the abstraction of an electronic device
- */
-function ElectronicDevice(type, label, comp, termMappings) {
-    this.type = type;
-
-    this.label = label;
-    /* the physical component used */
-    this.comp = comp;
-
-    /* the mappings of the logical to the physical terminals */
-    this.termMappings = termMappings;
-
-    if (this.termMappings == undefined && this.comp != undefined
-	    && this.type != undefined) {
-	/* try to get the default mappings of the component for this device type */
-	this.termMappings = this.comp.asDevice(this.type);
-    }
-
-    /* initialize the component as this device */
-    if (this.comp != undefined && this.comp.init != undefined) {
-	this.comp.init(this);
-    }
-}
 
 function Connection(terminals) {
 
@@ -109,8 +97,48 @@ ElectronicCircuit.prototype.createPCB = function() {
     return pcb;
 };
 
+
+/**
+ * The representation of the abstraction of an electronic device
+ */
+function ElectronicDevice(type, label, comp, termMappings) {
+    this.type = type;
+
+    this.label = label;
+    /* the physical component used */
+    this.comp = comp;
+
+    /* the mappings of the logical to the physical terminals */
+    this.termMappings = termMappings;
+
+    if (this.termMappings == undefined && this.comp != undefined
+	    && this.type != undefined) {
+	/* try to get the default mappings of the component for this device type */
+	this.termMappings = this.comp.asDevice(this.type);
+    }
+
+    /* initialize the component as this device */
+    if (this.comp != undefined && this.comp.init != undefined) {
+	this.comp.init(this);
+    }
+}
+
 ElectronicDevice.prototype = new ElectronicDevice();
 ElectronicDevice.prototype.constructor = ElectronicDevice;
+
+ElectronicDevice.prototype.toJSON=function(){
+  return {
+      type : this.type,
+      termMappings : this.termMappings,
+      _class : this.__proto__.constructor.name
+  };  
+};
+
+ElectronicDevice.prototype.fromJSON=function(json){
+    this.type = json.type;
+    this.termMappings = json.termMappings;
+};
+
 
 ElectronicDevice.prototype.getTerminal = function(label) {
     var m = this.termMappings[label];
@@ -205,6 +233,8 @@ TrackPoint.prototype.removeFromPath = function(path) {
 };
 
 
+
+
 /**
  * The representation of a possible physical arrangement for an electronic
  * circuit
@@ -275,10 +305,19 @@ PCB.prototype.fromJSON = function(json){
     for(var i in json.components){
 	var saved = json.components[i];
 	var current = this.components[i];
-	
-	current.fromJSON(saved);
+	if(current){
+	    current.fromJSON(saved);
+	}
+	else{
+	    var c = createObjectFromJson(saved,window);
+	    this.addComponent(c);
+	    c.fromJSON(saved);
+	}
     }
     
+    if(this.onComponentsPopulated){
+	this.onComponentsPopulated(this);
+    }
     
     for(var i in json.pathsArray){
 	var sp = json.pathsArray[i];
@@ -289,10 +328,10 @@ PCB.prototype.fromJSON = function(json){
     
 };
 
-PCB.prototype.addComponent = function(component) {
+PCB.prototype.addComponent = function(component,id) {
     this.components.push(component);
 //    this.addPart(component.footprint);
-    this.componentsLayer.addPart(component.footprint);
+    this.componentsLayer.addPart(component.footprint,undefined,id);
 };
 
 PCB.prototype.addTrack = function(track) {
@@ -556,12 +595,62 @@ function ElectronicComponent(label) {
 
     /* allow mappings to a specific device */
     this.deviceMappings = {};
+    
+    /* what kind of device this component is */
+    this.device;
 }
 
 ElectronicComponent.prototype = new ElectronicElement();
 ElectronicComponent.prototype.constructor = ElectronicComponent;
 
+ElectronicComponent.prototype.toJSON=function(){
+    var json = ElectronicElement.prototype.toJSON.apply(this,arguments);
+    json.terminals = this.terminals;
+    json.connections = this.connections;
+    json.deviceMappings = this.deviceMappings;
+    json.device = this.device;
+    return json;
+};
+
+
+ElectronicComponent.prototype.fromJSON = function(json){
+    
+  
+    
+    
+    try {
+	
+	this.device = createObjectFromJson(json.device, window);
+	this.device.comp =this;
+	this.init(this.device);
+    } catch (e) {
+
+//	throw e;
+    }
+    ;
+
+    ElectronicElement.prototype.fromJSON.apply(this,arguments);
+   
+   
+    
+    var self = this;
+    
+    
+//    if(json.terminals){
+//        json.terminals.forEach(function (st){
+//    		self.addTerminal(createObjectFromJson(st, window));
+//        });
+//    }
+//    if(json.connections){
+//	this.connections = json.connections;
+//    }
+//    this.deviceMappings = json.deviceMappings;
+};
+
 ElectronicComponent.prototype.addTerminal = function(terminal) {
+    if(!terminal){
+	return;
+    }
     this.terminals.push(terminal);
     this.footprint.addPart(terminal.footprint);
     if (terminal.hole != undefined) {
@@ -589,6 +678,10 @@ ElectronicComponent.prototype.onReady = function() {
     if (this.label == undefined) {
 	this.label = this.id;
     }
+};
+
+ElectronicComponent.prototype.init = function(device){
+    this.device = device;
 };
 
 /**

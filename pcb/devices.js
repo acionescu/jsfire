@@ -245,4 +245,3 @@ BipolarTransistor.prototype.getEmitor = function() {
     return this.getTerminal(DeviceTypes.BIPOLAR_TRANSISTOR.T.E);
 };
 
-

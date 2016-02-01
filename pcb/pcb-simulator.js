@@ -120,110 +120,126 @@ stc.addConnection(vccConn);
 
 var pcb1 = stc.createPCB();
 
+//var pcb1 = new PCB();s
+
 universe.setScale([ 4.7, 4.7 ]);
 pcb1.shape = new Rectangle(50, 70,'#000000');
 //pcb1.shape.strokeColor=undefined;
-console.log(pcb1.shape.strokeColor);
+
 pcb1.setPosition(70, 60);
 pcb1.selectable = false;
 
-universe.addObject(pcb1);
 
-// pcb1.setComponentsVisible(false);
+pcb1.onComponentsPopulated=function(pcb){
+    universe.addObject(pcb1);
+    
+};
 
-ic1.comp.footprint.setRelativePos(0, 0);
+//universe.addObject(pcb1);
+//
+//// pcb1.setComponentsVisible(false);
+//
+//ic1.comp.footprint.setRelativePos(0, 0);
+//
+////led1.comp.footprint.rotate(Math.PI);
+//led1.comp.footprint.setRelativePos(21, 10);
+//
+//led_R.comp.footprint.setRelativePos(12, 10);
+//
+//pushb.comp.footprint.setRelativePos(18, 2);
+//
+//supply.comp.footprint.setRelativePos(20, -25);
+//
+//motorOut.comp.footprint.setRelativePos(20, 25);
+//
+//l7812.comp.footprint.rotate(-Math.PI / 2);
+//l7812.comp.footprint.setRelativePos(2, -29);
+//
+//l7805.comp.footprint.rotate(Math.PI / 2);
+//
+//l7805.comp.footprint.setRelativePos(-2, -29);
+//
+//cap033uF.comp.footprint.setRelativePos(11, -25);
+//
+//cap100nFReg.comp.footprint.rotate(Math.PI);
+//cap100nFReg.comp.footprint.setRelativePos(8, -31);
+//
+//quartz.comp.footprint.rotate(Math.PI / 2);
+//
+//quartz.comp.footprint.setRelativePos(-15, 2);
+//
+//xtalCap1.comp.footprint.rotate(-Math.PI / 2);
+//xtalCap1.comp.footprint.setRelativePos(-10, 3);
+//
+//xtalCap2.comp.footprint.rotate(Math.PI / 2);
+//xtalCap2.comp.footprint.setRelativePos(-7, 3);
+//
+//arefCap.comp.footprint.rotate(Math.PI / 2);
+//arefCap.comp.footprint.setRelativePos(9, 0);
+//
+//resetRes.comp.footprint.rotate(Math.PI / 2);
+//resetRes.comp.footprint.setRelativePos(-9, -21);
+//
+//mControlRes1.comp.footprint.rotate(Math.PI / 2);
+//mControlRes1.comp.footprint.setRelativePos(12, 22);
+//
+//mControlRes2.comp.footprint.setRelativePos(-12, 11);
+//
+//// bc337_1.comp.footprint.rotate(-Math.PI/2);
+//bc337_1.comp.footprint.setRelativePos(20, 30);
+//
+//bc337_2.comp.footprint.rotate(Math.PI);
+//bc337_2.comp.footprint.setRelativePos(-15, 15);
+//
+//tip122_1.comp.footprint.rotate(Math.PI / 2);
+//tip122_1.comp.footprint.setRelativePos(-15, 25);
+//
+//tip127_1.comp.footprint.rotate(-Math.PI / 2);
+//tip127_1.comp.footprint.setRelativePos(-11, 25);
+//
+//tip122_2.comp.footprint.rotate(-Math.PI / 2);
+//tip122_2.comp.footprint.setRelativePos(4, 25);
+//
+//tip127_2.comp.footprint.rotate(Math.PI / 2);
+//tip127_2.comp.footprint.setRelativePos(0, 25);
+//
+////d1.comp.footprint.rotate(Math.PI);
+//d1.comp.footprint.setRelativePos(-19, 28);
+//
+//d2.comp.footprint.rotate(Math.PI);
+//d2.comp.footprint.setRelativePos(-5.5, 28);
+//
+//d3.comp.footprint.rotate(Math.PI);
+//d3.comp.footprint.setRelativePos(9, 22);
+//
+//d4.comp.footprint.setRelativePos(-5.5, 23);
+//
+//ldr1.comp.footprint.setRelativePos(18,-10);
+//
+//
+//for ( var i in pcb1.components) {
+//    var c = pcb1.components[i];
+//    var fp = c.footprint;
+//    if (fp == undefined) {
+//	continue;
+//    }
+//    var rp = fp.relPos;
+//    fp.setRelativePos(-rp.coords[0], rp.coords[1]);
+//
+//    if (Math.abs(fp.rotation) == CONSTANTS.half_PI) {
+//	fp.rotate(Math.PI);
+//    }
+//}
+//
+//supply.comp.footprint.rotate(-Math.PI);
+//motorOut.comp.footprint.rotate(Math.PI);
 
-//led1.comp.footprint.rotate(Math.PI);
-led1.comp.footprint.setRelativePos(21, 10);
 
-led_R.comp.footprint.setRelativePos(12, 10);
-
-pushb.comp.footprint.setRelativePos(18, 2);
-
-supply.comp.footprint.setRelativePos(20, -25);
-
-motorOut.comp.footprint.setRelativePos(20, 25);
-
-l7812.comp.footprint.rotate(-Math.PI / 2);
-l7812.comp.footprint.setRelativePos(2, -29);
-
-l7805.comp.footprint.rotate(Math.PI / 2);
-
-l7805.comp.footprint.setRelativePos(-2, -29);
-
-cap033uF.comp.footprint.setRelativePos(11, -25);
-
-cap100nFReg.comp.footprint.rotate(Math.PI);
-cap100nFReg.comp.footprint.setRelativePos(8, -31);
-
-quartz.comp.footprint.rotate(Math.PI / 2);
-
-quartz.comp.footprint.setRelativePos(-15, 2);
-
-xtalCap1.comp.footprint.rotate(-Math.PI / 2);
-xtalCap1.comp.footprint.setRelativePos(-10, 3);
-
-xtalCap2.comp.footprint.rotate(Math.PI / 2);
-xtalCap2.comp.footprint.setRelativePos(-7, 3);
-
-arefCap.comp.footprint.rotate(Math.PI / 2);
-arefCap.comp.footprint.setRelativePos(9, 0);
-
-resetRes.comp.footprint.rotate(Math.PI / 2);
-resetRes.comp.footprint.setRelativePos(-9, -21);
-
-mControlRes1.comp.footprint.rotate(Math.PI / 2);
-mControlRes1.comp.footprint.setRelativePos(12, 22);
-
-mControlRes2.comp.footprint.setRelativePos(-12, 11);
-
-// bc337_1.comp.footprint.rotate(-Math.PI/2);
-bc337_1.comp.footprint.setRelativePos(20, 30);
-
-bc337_2.comp.footprint.rotate(Math.PI);
-bc337_2.comp.footprint.setRelativePos(-15, 15);
-
-tip122_1.comp.footprint.rotate(Math.PI / 2);
-tip122_1.comp.footprint.setRelativePos(-15, 25);
-
-tip127_1.comp.footprint.rotate(-Math.PI / 2);
-tip127_1.comp.footprint.setRelativePos(-11, 25);
-
-tip122_2.comp.footprint.rotate(-Math.PI / 2);
-tip122_2.comp.footprint.setRelativePos(4, 25);
-
-tip127_2.comp.footprint.rotate(Math.PI / 2);
-tip127_2.comp.footprint.setRelativePos(0, 25);
-
-//d1.comp.footprint.rotate(Math.PI);
-d1.comp.footprint.setRelativePos(-19, 28);
-
-d2.comp.footprint.rotate(Math.PI);
-d2.comp.footprint.setRelativePos(-5.5, 28);
-
-d3.comp.footprint.rotate(Math.PI);
-d3.comp.footprint.setRelativePos(9, 22);
-
-d4.comp.footprint.setRelativePos(-5.5, 23);
-
-ldr1.comp.footprint.setRelativePos(18,-10);
-
-for ( var i in pcb1.components) {
-    var c = pcb1.components[i];
-    var fp = c.footprint;
-    if (fp == undefined) {
-	continue;
-    }
-    var rp = fp.relPos;
-    fp.setRelativePos(-rp.coords[0], rp.coords[1]);
-
-    if (Math.abs(fp.rotation) == CONSTANTS.half_PI) {
-	fp.rotate(Math.PI);
-    }
-}
-
-supply.comp.footprint.rotate(-Math.PI);
-motorOut.comp.footprint.rotate(Math.PI);
+//pcb1.addComponent(new Via("1","1-1"));
+//pcb1.addComponent(new Via("1","1-2"));
+//
+//pcb1.addComponent(new Via("2","2-1"));
+//pcb1.addComponent(new Via("2","2-2"));
 
 
 function TrackBuilder() {
@@ -467,4 +483,4 @@ var gndTrack1 = gndTb1.getTrack();
 //pcb1.addTrack(vout12track);
 
 
-
+console.log(new window["StandingDiodeComp"]());
