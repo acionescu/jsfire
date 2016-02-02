@@ -309,7 +309,7 @@ PCB.prototype.fromJSON = function(json){
 	    current.fromJSON(saved);
 	}
 	else{
-	    var c = createObjectFromJson(saved,window);
+	    var c = createObjectFromJson(saved,window,true);
 	    this.addComponent(c);
 	    c.fromJSON(saved);
 	}
@@ -321,9 +321,12 @@ PCB.prototype.fromJSON = function(json){
     
     for(var i in json.pathsArray){
 	var sp = json.pathsArray[i];
-	var path = this.createNewPath();
-	
+	var path = new Path(this);
+	path.id = sp.id;
+	this.addPath(path);
 	path.fromJSON(sp);
+	
+	
     }
     
 };
@@ -331,7 +334,8 @@ PCB.prototype.fromJSON = function(json){
 PCB.prototype.addComponent = function(component,id) {
     this.components.push(component);
 //    this.addPart(component.footprint);
-    this.componentsLayer.addPart(component.footprint,undefined,id);
+    this.componentsLayer.addPart(component.footprint);
+    
 };
 
 PCB.prototype.addTrack = function(track) {
@@ -396,10 +400,11 @@ PCB.prototype.createNewPath = function(width) {
     return path;
 };
 
-PCB.prototype.createNewTrackPoint = function(pos) {
+PCB.prototype.createNewTrackPoint = function(pos,id) {
     var handler = new Footprint();
     handler.shape = new Circle(1, '#ff0000');
     handler.setSelectable(false);
+    handler.id = id;
    
     /* add the handler under the paths object */
     this.auxPoints.addPart(handler);
@@ -458,15 +463,19 @@ Path.prototype.fromJSON = function(json){
 	/* see if a footprint with the specified id exists */
 	var footprint = self.universe.getObjectById(stp.footprintId);
 	
+	
+	
 	var tp;
 	if(footprint != undefined){
 	    tp = self.pcb.getTrackPoint(footprint,true);
 	}
 	/* if no footprint exists then we're dealing with an auxiliary point */
 	else{
-	    tp = self.pcb.createNewTrackPoint(stp.position);
+	    console.log("add point "+stp.footprintId +" auxiliary "+stp.auxiliary);
+	    tp = self.pcb.createNewTrackPoint(stp.position,stp.footprintId);
 	    tp.footprint.setSelectable(stp.selectable);
 	    tp.footprint.setVisible(stp.visible);
+	    
 	}
 	/* add the point to the path */
 	self.addTrackPoint(tp);
@@ -636,11 +645,14 @@ ElectronicComponent.prototype.fromJSON = function(json){
     var self = this;
     
     
-//    if(json.terminals){
-//        json.terminals.forEach(function (st){
-//    		self.addTerminal(createObjectFromJson(st, window));
-//        });
-//    }
+    if(json.terminals){
+	
+	for(var i=0;i<json.terminals.length;i++){
+	   
+	    this.terminals[i].fromJSON(json.terminals[i]);
+	}
+       
+    }
 //    if(json.connections){
 //	this.connections = json.connections;
 //    }
@@ -733,6 +745,21 @@ function THT(label, hole) {
 THT.prototype = new Terminal();
 THT.prototype.constructor = THT;
 
+
+THT.prototype.toJSON=function(){
+  var json = Terminal.prototype.toJSON.apply(this,arguments);
+  json.hole = this.hole;
+  return json;
+};
+
+THT.prototype.fromJSON=function(json){
+    Terminal.prototype.fromJSON.apply(this,arguments);
+    if(json.hole){
+	this.hole.fromJSON(json.hole);
+    }
+};
+
+
 function Hole(radius) {
     Footprint.call(this);
     if(!radius){
@@ -744,6 +771,21 @@ function Hole(radius) {
 
 Hole.prototype = new Footprint();
 Hole.prototype.constructor = Hole;
+
+Hole.prototype.toJSON=function(){
+    var json = Footprint.prototype.toJSON.apply(this,arguments);
+    json.radius =this.shape.radius;
+    return json;
+};
+
+Hole.prototype.fromJSON=function(json){
+    Footprint.prototype.fromJSON.apply(this,arguments);
+    if(json.radius){
+	this.setRadius(json.radius);
+    }
+};
+
+
 
 Hole.prototype.setRadius=function(radius){
     this.shape = new Circle(radius, undefined, '#ffffff');

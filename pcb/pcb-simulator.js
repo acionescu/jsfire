@@ -118,9 +118,9 @@ var vccConn = new Connection([ supply.getVcc(), cap033uF.getAnode(),
 
 stc.addConnection(vccConn);
 
-var pcb1 = stc.createPCB();
+//var pcb1 = stc.createPCB();
 
-//var pcb1 = new PCB();s
+var pcb1 = new PCB();
 
 universe.setScale([ 4.7, 4.7 ]);
 pcb1.shape = new Rectangle(50, 70,'#000000');
@@ -235,11 +235,7 @@ pcb1.onComponentsPopulated=function(pcb){
 //motorOut.comp.footprint.rotate(Math.PI);
 
 
-//pcb1.addComponent(new Via("1","1-1"));
-//pcb1.addComponent(new Via("1","1-2"));
-//
-//pcb1.addComponent(new Via("2","2-1"));
-//pcb1.addComponent(new Via("2","2-2"));
+
 
 
 function TrackBuilder() {

@@ -2,9 +2,9 @@ function DIL(pinsCount, label) {
     ElectronicComponent.call(this, label);
     this.pinsCount = pinsCount;
    
-    if(this.pinsCount){
-	this.initPins();
-    }
+//    if(this.pinsCount){
+//	this.initPins();
+//    }
     
 
   
@@ -24,15 +24,15 @@ DIL.prototype.fromJSON=function(json){
     if(json.pinsCount){
 	this.pinsCount = json.pinsCount;
     }
-    if(this.terminals.length == 0){
-    	this.initPins();
-    }
+//    if(this.terminals.length == 0){
+//    	this.initPins();
+//    }
     ElectronicComponent.prototype.fromJSON.apply(this, arguments);
    
 
 };
 
-DIL.prototype.initPins=function(){
+DIL.prototype.init=function(device){
    
     this.createTerminals(this.pinsCount, "p", 0.35);
     
@@ -457,6 +457,7 @@ CeramicCapComp.prototype.toJSON = function(){
 };
 
 CeramicCapComp.prototype.fromJSON=function(json){
+    console.log("from json "+json.label);
     if(json.raster){
 	this.raster = json.raster;
     }
@@ -470,6 +471,7 @@ CeramicCapComp.prototype.fromJSON=function(json){
 };
 
 CeramicCapComp.prototype.init=function(device){
+    console.log("init "+this.footprint.id);
     ElectronicComponent.prototype.init.apply(this,arguments);
     
     
@@ -664,7 +666,7 @@ function Via(id,label,radius){
 	
 	 if (this.fillColor) {
 		canvas.fillStyle = this.fillColor;
-		canvas.fillText(id,scale[0] * (coords[0]+self.radius),scale[1] * (coords[1]+2*self.radius)) ;
+		canvas.fillText(self.id,scale[0] * (coords[0]+self.radius),scale[1] * (coords[1]+2*self.radius)) ;
 	 }
     };
     
@@ -673,4 +675,23 @@ function Via(id,label,radius){
 
 Via.prototype = new ElectronicComponent();
 Via.prototype.constructor = Via;
+
+Via.prototype.toJSON = function(){
+    var json = ElectronicComponent.prototype.toJSON.apply(this,arguments);
+    json.vid = this.id;
+    json.vradius = this.radius;
+    return json;
+};
+
+Via.prototype.fromJSON=function(json){
+    
+    if(json.vid){
+	this.id = json.vid;
+    }
+    if(json.vradius){
+	this.radius = json.vradius;
+    }
+    
+    ElectronicComponent.prototype.fromJSON.apply(this,arguments);
+};
 
