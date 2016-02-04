@@ -18,6 +18,24 @@ function copyDiv(sourceId,destId){
   }
 
 
+function createObjectFromJson(json,namespace,preventFromJson){
+    /*expects a _class property specifying the class function */
+    if(!json ||!json._class){
+	throw "json undefined or no _class property present";
+    }
+    
+    var obj = new namespace[json._class]();
+    if(!obj){
+	console.log(json);
+	throw "Couldn't create object from class "+json._class;
+    }
+    if(!preventFromJson){
+	obj.fromJSON(json);
+    }
+    
+    return obj;
+}
+
 /**
  * Handles the user interaction with the objects in the {@link Universe}
  */

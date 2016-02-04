@@ -181,11 +181,21 @@ function Shape(strokeColor, fillColor) {
 }
 
 Shape.prototype.constructor = Shape;
-Shape.prototype.draw = function(canvas, position) {
+Shape.prototype.draw = function(canvas, position, scale, rotation) {
 };
 
 Shape.prototype.hitTest = function(pos, mouseX, mouseY) {
     return false;
+};
+
+Shape.prototype.toJSON=function(){
+    return {
+	visible : this.visible,
+	fillColor : this.fillColor,
+	strokeColor : this.strokeColor,
+	absolutePos : this.absolutePos,
+	_class : this.__proto__.constructor.name
+    };
 };
 
 Shape.prototype.fromJSON=function(json){
@@ -257,7 +267,7 @@ Rectangle.prototype.draw = function(canvas, position, scale, rotation) {
     if (this.strokeColor) {
 	canvas.strokeStyle = this.strokeColor;
 	canvas.stroke();
-    }
+    };
 };
 
 Rectangle.prototype.hitTest = function(pos, mouseX, mouseY, scale, rotation) {
@@ -477,9 +487,12 @@ PhysicalObject.prototype.fromJSON=function(json){
     if(json == undefined){
 	return;
     }
-    if(this.id != json.id){
+    if(this.id && this.id != json.id){
 	console.log(json);
 	throw "Can't restore from json : Expected id "+this.id+ " but was "+json.id;
+    }
+    else{
+	this.id=json.id;
     }
     
     if(json.shape){
@@ -487,8 +500,8 @@ PhysicalObject.prototype.fromJSON=function(json){
 	    this.shape.fromJSON(json.shape);
 	}
 	else{
-	    console.log("adding new shape for "+this.id);
-	    this.shape = json.shape;
+//	    console.log("adding new shape for "+this.id);
+//	    this.shape = json.shape;
 	}
     }
     
@@ -497,10 +510,10 @@ PhysicalObject.prototype.fromJSON=function(json){
     this.setPosition(newPosCoords[0],newPosCoords[1]);
 //    	this.position.fromJSON(json.position);
 //    	this.updatePosition();
-    
     /* compute rotation difference , then rotate */
     var rotDif = json.rotation - this.rotation;
     if(rotDif != 0){
+	console.log("rotate "+this.id);
 	this.rotate(rotDif);
     }
     
@@ -525,8 +538,8 @@ PhysicalObject.prototype.onAttach = function(universe) {
 
     /* now we're sure that all parts have an id */
     this.indexParts();
-
-    /* allow specific object to do theri initialization */
+    
+    /* allow specific object to do their initialization */
     this.onReady();
 };
 
@@ -656,6 +669,7 @@ PhysicalObject.prototype.updatePosition = function() {
  * @param part
  */
 PhysicalObject.prototype.determinePartPosition = function(part) {
+    
     if (this.position == undefined) {
 	throw "positiond undefined for part " + part.id;
     }
@@ -714,7 +728,7 @@ PhysicalObject.prototype.drawWithParts=function(canvas,scale){
  * @param relPos
  *                relative position of the part to the parent
  */
-PhysicalObject.prototype.addPart = function(part, relPos) {
+PhysicalObject.prototype.addPart = function(part, relPos,id) {
     if(part.parent){
 	throw "Part "+part.id+" already has a parent: "+part.parent.id;
     }
@@ -723,7 +737,7 @@ PhysicalObject.prototype.addPart = function(part, relPos) {
     part.parent = this;
     
     /* add the part to the universe if not added yet */
-    if (!part.id && !!this.universe) {
+    if (!part.universe && !!this.universe) {
 	
 	    /* if the part doesn't have a position, copy the position of the parent */
 	    if (!!relPos) {
@@ -732,8 +746,8 @@ PhysicalObject.prototype.addPart = function(part, relPos) {
 
 	    this.determinePartPosition(part);
 	
-	
-	this.universe.addObject(part);
+//	console.log("adding part "+part.id);
+	this.universe.addObject(part,id);
 //	this.partsMap[part.id] = part;
     }
 
@@ -745,7 +759,7 @@ PhysicalObject.prototype.addPart = function(part, relPos) {
 
 PhysicalObject.prototype.removePart = function(part,removeFromUniverse) {
     var partIndex = this.parts.indexOf(part);
-    console.log('removing part '+part);
+//    console.log('removing part '+part);
     this.parts.splice(partIndex, 1);
     delete this.partsMap[part.id];
     part.parent = undefined;
@@ -996,15 +1010,29 @@ Universe.prototype.resetDrawSettings = function(canvas){
     canvas.lineWidth = this.defaultDrawSettings.lineWidth;
 };
 
-Universe.prototype.addObject = function(object) {
+Universe.prototype.getNextObjectid = function(){
     this.objectsIndex += 1;
+    return "PhysObj-" + (this.objectsIndex);
+};
+
+Universe.prototype.addObject = function(object,id) {
+    var nextId = this.getNextObjectid();
     if (!object.id) {
-	object.id = "PhysObj-" + (this.objectsIndex);
+	
+	while(this.objectsMap[nextId]){
+	    //throw "Object id collision on "+object.id;
+	    nextId = this.getNextObjectid();
+	};
+	object.id = nextId;
+    }
+    else if(this.objectsMap[object.id]){
+	console.log(this.objectsMap);
+	throw "Object with id "+object.id+" already exists.";
     }
     if (!object.position) {
 	object.position = new Point([ 0, 0 ]);
     }
-
+    console.log("adding obj "+object.id);
     this.objects.push(object);
     this.pointsObjects[object.position.coords] = object;
     this.objectsMap[object.id] = object;
@@ -1069,6 +1097,7 @@ Universe.prototype.getHitObject = function(mouseX, mouseY) {
 	}
 	catch(e){
 	    console.log("Failed to hit test object "+this.objects[i].id);
+	    console.log(e);
 	    throw e;
 	}
 	if (hit) {
