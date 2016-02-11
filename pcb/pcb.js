@@ -354,6 +354,22 @@ PCB.prototype.setComponentsVisible = function(visible) {
     ;
 };
 
+PCB.prototype.setPathsVisible = function(visible){
+    this.paths.parts.forEach(function(p){
+	if(p.shape){
+	    p.shape.visible = visible;
+	}
+    });
+};
+
+PCB.prototype.setTerminalsVisible = function(visible){
+    this.components.forEach(function(c){
+	c.terminals.forEach(function(t){
+	   t.footprint.setVisible(visible); 
+	});
+    });
+};
+
 PCB.prototype.getTrackPoint = function(footprint, create) {
     return this.tracksManager.getTrackPoint(footprint, create);
 };

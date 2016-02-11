@@ -979,9 +979,9 @@ Universe.prototype.stop = function() {
     }
 };
 
-Universe.prototype.update = function() {
+Universe.prototype.update = function(maintainPrev) {
     this.compute();
-    this.draw(this.canvas);
+    this.draw(this.canvas,maintainPrev);
 };
 
 Universe.prototype.compute = function() {
@@ -992,8 +992,10 @@ Universe.prototype.compute = function() {
     ;
 };
 
-Universe.prototype.draw = function(canvas) {
-    canvas.clearRect(0, 0, canvas.width, canvas.height);
+Universe.prototype.draw = function(canvas,maintainPrev) {
+    if(!maintainPrev){
+	canvas.clearRect(0, 0, canvas.width, canvas.height);
+    }
     
 //    for (var i = 0; i < this.objects.length; i++) {
 //	this.objects[i].draw(canvas, this.scale);

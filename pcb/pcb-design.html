@@ -77,7 +77,15 @@ Tool:
 		
 		<div id="global-commands">
 		<div id="global-flags">
-			 <label>Show components</label><input type="checkbox" checked="checked" onclick="comandManager.showComponents(this)">
+			<div>
+			<label>Show components</label><input type="checkbox" checked="checked" onclick="comandManager.showComponents(this)">
+			</div>
+			<div>
+			<label>Show terminals</label><input type="checkbox" checked="checked" onclick="comandManager.showTerminals(this)">
+			</div>
+			<div>
+			<label>Show paths</label><input type="checkbox" checked="checked" onclick="comandManager.showPaths(this)">
+			</div>
 		</div>
 			<button onclick="comandManager.onSave()">Save</button>
 			<button onclick="comandManager.exportToImage()">To Image</button>
@@ -110,7 +118,7 @@ Tool:
 	
 	
 	<script src="controls.js"></script>
-	<script src="saved33.js"></script>
+	<script src="saved34.js"></script>
 	<script src="loadSavedData.js"></script>
 	
 	<script>

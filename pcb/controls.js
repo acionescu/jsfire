@@ -555,18 +555,43 @@ var comandManager = {
 	    var newCanvas = document.createElement('canvas');
 	    var context = newCanvas.getContext('2d');
 	    
-	    newCanvas.width = 2048;
-	    newCanvas.height = 2048;
+	    /* get pcb dimensions */
+	    var pcbWidth = CONTEXT.selectedPcb.shape.width;
+	    var pcbHeight = CONTEXT.selectedPcb.shape.height;
+	 
+	    newCanvas.width = pcbWidth*2*15; // scale is 15
+	    newCanvas.height = pcbHeight*15;
 	    
 	    var c = document.getElementById("commSimCanvas");
 	   
 	    universe.canvas = context;
+	    
+
+	    
 	    var prevScale = universe.scale;
+	    var prevPos = CONTEXT.selectedPcb.position;
+	    
+	   
+	    
+	    
+	    CONTEXT.selectedPcb.setPosition(3*pcbWidth/2,pcbHeight/2);
+	    CONTEXT.selectedPcb.setComponentsVisible(true);
+	    CONTEXT.selectedPcb.setPathsVisible(false);
+	    
 	    universe.scale = [15,15];
 	    universe.update();
+	    
+	    context.scale(-1,1);
+	    CONTEXT.selectedPcb.setPosition(-pcbWidth/2,pcbHeight/2);
+	    CONTEXT.selectedPcb.setComponentsVisible(false);
+	    CONTEXT.selectedPcb.setPathsVisible(true);
+	    universe.update(true);
+	    
+	    context.scale(1,1);
+	    CONTEXT.selectedPcb.setComponentsVisible(true);
+	    CONTEXT.selectedPcb.setPosition(prevPos.coords[0],prevPos.coords[1]);
 	    universe.scale = prevScale;
 	    universe.canvas = c.getContext('2d');
-	    
 	    
 	    window.open(newCanvas.toDataURL(),'_blak');
 	    window.focus();
@@ -575,6 +600,20 @@ var comandManager = {
 	showComponents : function(checkbox){
 	    
 	    CONTEXT.selectedPcb.setComponentsVisible(checkbox.checked);
+	    universe.update();
+	}
+	,
+	
+	showTerminals : function(checkbox){
+	    
+	    CONTEXT.selectedPcb.setTerminalsVisible(checkbox.checked);
+	    universe.update();
+	}
+	,
+	
+	showPaths : function(checkbox){
+	    
+	    CONTEXT.selectedPcb.setPathsVisible(checkbox.checked);
 	    universe.update();
 	}
 	,
