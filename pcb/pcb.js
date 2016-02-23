@@ -1,21 +1,27 @@
 
-function ElectronicElement(label) {
+
+function PcbElement(label,footprint) {
     this.label = label;
 
     /* an associated symbol to display in a circuit */
     this.symbol;
 
     /* a footprint on a pcb */
-    this.footprint = new Footprint();
+    if(footprint != undefined){
+	this.footprint = footprint;
+    }
+    else{
+	this.footprint = new Footprint();
+    }
     this.footprint.element = this;
 
 }
 
-ElectronicElement.prototype = new ElectronicElement();
-ElectronicElement.prototype.constructor = ElectronicElement;
+PcbElement.prototype = new PcbElement();
+PcbElement.prototype.constructor = PcbElement;
 
 
-ElectronicElement.prototype.toJSON = function(){
+PcbElement.prototype.toJSON = function(){
    
     return {
 	label : this.label,
@@ -24,12 +30,26 @@ ElectronicElement.prototype.toJSON = function(){
     };
 };
 
-ElectronicElement.prototype.fromJSON=function(json){
+PcbElement.prototype.fromJSON=function(json){
   this.label = json.label;
   this.footprint.fromJSON(json.footprint);  
   this.footprint.element = this;
   
 };
+
+PcbElement.prototype.setFootprint=function(footprint){
+    this.footprint = footprint;
+    this.footprint.element = this;
+};
+
+
+function ElectronicElement(label,footprint) {
+    PcbElement.call(this, label, footprint);
+}
+
+ElectronicElement.prototype = new PcbElement();
+ElectronicElement.prototype.constructor = ElectronicElement;
+
 
 function Footprint(position, shape) {
     PhysicalObject.call(this, position, shape);
@@ -54,10 +74,10 @@ Connection.prototype = new Connection();
 Connection.prototype.constructor = Connection;
 
 function Track(connection, label) {
-    ElectronicElement.call(this, label);
+    PcbElement.call(this, label);
 }
 
-Track.prototype = new ElectronicElement();
+Track.prototype = new PcbElement();
 Track.prototype.constructor = Track;
 
 /**
@@ -244,6 +264,9 @@ function PCB() {
     PhysicalObject.call(this);
     /* components on this pcb */
     this.components = [];
+    
+    /* holes on this pcb */
+    this.holes = [];
 
     /* tracks on this pcb */
     this.tracks = [];
@@ -269,11 +292,16 @@ function PCB() {
     this.paths = new PhysicalObject();
     this.paths.selectable = false;
     
+    this.holesLayer = new PhysicalObject();
+    this.holesLayer.id="holes_layer";
+    this.holesLayer.selectable = false;
+    
     this.auxPoints = new PhysicalObject();
     this.auxPoints.selectable = false;
 
     this.addPart(this.paths);
     this.addPart(this.componentsLayer);
+    this.addPart(this.holesLayer);
     this.addPart(this.auxPoints);
 
 }
@@ -287,6 +315,7 @@ PCB.prototype.toJSON=function(){
     json.components = this.components;
     json.pathsArray = this.paths.parts;
     json.tracksmanager = this.tracksManager;
+    json.holes =this.holes;
   
     return json;
 };
@@ -326,7 +355,13 @@ PCB.prototype.fromJSON = function(json){
 	this.addPath(path);
 	path.fromJSON(sp);
 	
-	
+    }
+    
+    for(var  i in json.holes){
+	var sh = json.holes[i];
+	var h = createObjectFromJson(sh,window,true);
+	this.addHole(h);
+	h.fromJSON(sh);
     }
     
 };
@@ -343,6 +378,11 @@ PCB.prototype.addTrack = function(track) {
     this.addPart(track.footprint);
 };
 
+PCB.prototype.addHole = function(hole){
+    this.holes.push(hole);
+    this.holesLayer.addPart(hole.footprint);
+};
+
 PCB.prototype.setComponentsVisible = function(visible) {
     for ( var c in this.components) {
 	var fp = this.components[c].footprint;
@@ -356,6 +396,14 @@ PCB.prototype.setComponentsVisible = function(visible) {
 
 PCB.prototype.setPathsVisible = function(visible){
     this.paths.parts.forEach(function(p){
+	if(p.shape){
+	    p.shape.visible = visible;
+	}
+    });
+};
+
+PCB.prototype.setHolesVisible = function(visible){
+    this.holesLayer.parts.forEach(function(p){
 	if(p.shape){
 	    p.shape.visible = visible;
 	}
@@ -799,13 +847,23 @@ Hole.prototype.fromJSON=function(json){
     if(json.radius){
 	this.setRadius(json.radius);
     }
+    
 };
-
-
 
 Hole.prototype.setRadius=function(radius){
-    this.shape = new Circle(radius, undefined, '#ffffff');
+    this.shape= new Circle(radius, this.shape.strokeColor, this.shape.fillColor);
 };
+
+
+function ScrewHole(label,radius){
+    PcbElement.call(this,label);
+    this.setFootprint(new Hole(radius));
+    this.footprint.shape = new Circle(radius, '#ff0000');
+    
+}
+
+ScrewHole.prototype = new PcbElement();
+ScrewHole.prototype.constructor = ScrewHole;
 
 this.PcbUtil = this.PcbUtil || {
     constants : {},

@@ -206,6 +206,8 @@ Shape.prototype.fromJSON=function(json){
 	this.absolutePos = new Point(json.absolutePos.coords);
     }
 	this.visible=json.visible;
+	this.strokeColor=json.strokeColor;
+	this.fillColor=json.fillColor;
 };
 
 function Rectangle(w, h, strokeColor, fillColor) {
@@ -354,6 +356,7 @@ function Circle(radius, strokeColor, fillColor) {
 
 Circle.prototype = new Ellipse();
 Circle.prototype.constructor = Circle;
+
 
 function CustomShape(points) {
     Shape.call(this);
@@ -1018,9 +1021,9 @@ Universe.prototype.getNextObjectid = function(){
 };
 
 Universe.prototype.addObject = function(object,id) {
-    var nextId = this.getNextObjectid();
+    
     if (!object.id) {
-	
+	var nextId = this.getNextObjectid();
 	while(this.objectsMap[nextId]){
 	    //throw "Object id collision on "+object.id;
 	    nextId = this.getNextObjectid();

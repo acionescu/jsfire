@@ -1,6 +1,7 @@
 function DIL(pinsCount, label) {
     ElectronicComponent.call(this, label);
     this.pinsCount = pinsCount;
+    this.pinsSpace = 2.538461538;
    
 //    if(this.pinsCount){
 //	this.initPins();
@@ -16,7 +17,7 @@ DIL.prototype.constructor = DIL;
 DIL.prototype.toJSON = function(){
     var json = ElectronicComponent.prototype.toJSON.apply(this, arguments);
     json.pinsCount = this.pinsCount;
-    console.log(this);
+
     return json;
 };
 
@@ -44,7 +45,7 @@ DIL.prototype.init=function(device){
 	t.footprint.shape = new Ellipse(PcbUtil.constants.dilTerminalXRadius,
 		PcbUtil.constants.dilTerminalYRadius, undefined, '#000000');
 	t.footprint.setRelativePos(PcbUtil.constants.dilXDif,
-		(i - qp) * 2.538 + 1);
+		(i - qp) * this.pinsSpace + 1);
     }
 
     for (i = this.pinsCount; i > this.pinsCount / 2; i--) {
@@ -52,7 +53,7 @@ DIL.prototype.init=function(device){
 	t.footprint.shape = new Ellipse(PcbUtil.constants.dilTerminalXRadius,
 		PcbUtil.constants.dilTerminalYRadius, undefined, '#000000');
 	
-	t.footprint.setRelativePos(-PcbUtil.constants.dilXDif,(this.pinsCount - i - qp) * 2.538 + 1);
+	t.footprint.setRelativePos(-PcbUtil.constants.dilXDif,(this.pinsCount - i - qp) * this.pinsSpace + 1);
 	
     }
 };

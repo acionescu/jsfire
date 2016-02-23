@@ -18,3 +18,7 @@ CONTEXT.selectedPcb.fromJSON(savedPcbData);
 //pcb1.addComponent(new Resistance_Quorter_Watt("colRes2"));
 
 //pcb1.addComponent(new CeramicCapComp("vccgndCap", 4, 6, 2).toDevice().comp);
+
+
+//pcb1.addHole(new ScrewHole("screw hole 1",1.45));
+
