@@ -857,13 +857,45 @@ Hole.prototype.setRadius=function(radius){
 
 function ScrewHole(label,radius){
     PcbElement.call(this,label);
-    this.setFootprint(new Hole(radius));
-    this.footprint.shape = new Circle(radius, '#ff0000');
+    var hole = new Hole(radius);
+    this.setFootprint(hole);
+    this.footprint.shape = new ScrewHoleShape(radius, '#000000');
     
-}
+    hole.setRadius=function(radius){
+	this.shape= new ScrewHoleShape(radius, this.shape.strokeColor, this.shape.fillColor);
+    };
+};
 
 ScrewHole.prototype = new PcbElement();
 ScrewHole.prototype.constructor = ScrewHole;
+
+
+
+function ScrewHoleShape(radius, strokeColor, fillColor) {
+   
+    Circle.call(this, radius, strokeColor, fillColor);
+}
+
+ScrewHoleShape.prototype = new Circle();
+ScrewHoleShape.prototype.constructor = ScrewHoleShape;
+
+ScrewHoleShape.prototype.draw = function(canvas, position, scale, rotation){
+	Ellipse.prototype.draw.apply(this, arguments);
+	
+	canvas.beginPath();
+	
+	canvas.moveTo(this.absolutePos.coords[0], this.absolutePos.coords[1]-this.absoluteYRadius);
+	canvas.lineTo(this.absolutePos.coords[0], this.absolutePos.coords[1]+this.absoluteYRadius);
+	
+	canvas.moveTo(this.absolutePos.coords[0]-this.absoluteXRadius,  this.absolutePos.coords[1]);
+	canvas.lineTo(this.absolutePos.coords[0]+this.absoluteXRadius, this.absolutePos.coords[1]);
+	
+	if (this.strokeColor) {
+		canvas.strokeStyle = this.strokeColor;
+		canvas.stroke();
+	}
+};
+
 
 this.PcbUtil = this.PcbUtil || {
     constants : {},

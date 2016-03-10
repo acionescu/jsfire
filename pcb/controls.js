@@ -552,46 +552,91 @@ var comandManager = {
 	    window.focus();
 	},
 	exportToImage : function(){
-	    var newCanvas = document.createElement('canvas');
-	    var context = newCanvas.getContext('2d');
+	    
+	    /* get img multiplier */
+	    
+	    var imgMultiplier = document.getElementById("imgMultiplier").value;
+	    
+	    if(imgMultiplier <=0 ){
+		alert("Image multiplier can't be zero or negative");
+		return;
+	    }
+	    
+	    
+	    
+	    /* see what sides  we're gonna draw */
+	    
+	    var showFront = document.getElementById("showComponentsFlag").checked;
+	    
+	    var showBack = document.getElementById("showPathsFlag").checked;
+	    
+	    var lines = showFront + showBack;
+	    
+	    if(lines <= 0){
+		alert("You need to check at least one of components and paths.");
+		return;
+	    }
+	    
+	    /* save original position and scale */
+	    var prevScale = universe.scale;
+	    var prevPos = CONTEXT.selectedPcb.position;
+	    console.log(prevPos);
 	    
 	    /* get pcb dimensions */
 	    var pcbWidth = CONTEXT.selectedPcb.shape.width;
 	    var pcbHeight = CONTEXT.selectedPcb.shape.height;
+	    
+	    
+	    var newCanvas = document.createElement('canvas');
+	    var context = newCanvas.getContext('2d');
 	 
-	    newCanvas.width = pcbWidth*2*15; // scale is 15
-	    newCanvas.height = pcbHeight*15;
+	    newCanvas.width = pcbWidth*imgMultiplier*15; // scale is 15
+	    newCanvas.height = pcbHeight*lines*15;
 	    
 	    var c = document.getElementById("commSimCanvas");
 	   
 	    universe.canvas = context;
 	    
-
-	    
-	    var prevScale = universe.scale;
-	    var prevPos = CONTEXT.selectedPcb.position;
-	    
-	   
-	    
-	    
-	    CONTEXT.selectedPcb.setPosition(3*pcbWidth/2,pcbHeight/2);
-	    CONTEXT.selectedPcb.setComponentsVisible(true);
-	    CONTEXT.selectedPcb.setPathsVisible(false);
 	    
 	    universe.scale = [15,15];
-	    universe.update();
 	    
-	    context.scale(-1,1);
-	    CONTEXT.selectedPcb.setPosition(-pcbWidth/2,pcbHeight/2);
-	    CONTEXT.selectedPcb.setComponentsVisible(false);
-	    CONTEXT.selectedPcb.setPathsVisible(true);
-	    universe.update(true);
+	    if(showFront){
+	   
+        	    /* draw front side */
+        	    
+        	    CONTEXT.selectedPcb.setComponentsVisible(true);
+        	    CONTEXT.selectedPcb.setHolesVisible(true);
+        	    CONTEXT.selectedPcb.setPathsVisible(false);
+        	    
+        	    for(var i=0;i<imgMultiplier;i++){
+        		CONTEXT.selectedPcb.setPosition((1+i*2)*pcbWidth/2,pcbHeight/2);
+        		universe.update(true);
+        	    }
+	    
+	    }
+	    
+	    
+	    if(showBack){
+        	    /* draw back side */
+        	    context.scale(-1,1);
+        	    CONTEXT.selectedPcb.setComponentsVisible(false);
+        	    CONTEXT.selectedPcb.setHolesVisible(false);
+        	    CONTEXT.selectedPcb.setPathsVisible(true);
+        	    
+        	    for(var i=0;i< imgMultiplier;i++){
+                	    CONTEXT.selectedPcb.setPosition(-(1+i*2)*pcbWidth/2,(2*lines-1)*pcbHeight/2);
+                	    universe.update(true);
+        	    }
+	    
+	    }
 	    
 	    context.scale(1,1);
 	    CONTEXT.selectedPcb.setComponentsVisible(true);
-	    CONTEXT.selectedPcb.setPosition(prevPos.coords[0],prevPos.coords[1]);
+	    
 	    universe.scale = prevScale;
 	    universe.canvas = c.getContext('2d');
+	    CONTEXT.selectedPcb.setPosition(prevPos.coords[0],prevPos.coords[1]);
+	    universe.update();
 	    
 	    window.open(newCanvas.toDataURL(),'_blak');
 	    window.focus();

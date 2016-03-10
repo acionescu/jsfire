@@ -78,17 +78,18 @@ Tool:
 		<div id="global-commands">
 		<div id="global-flags">
 			<div>
-			<label>Show components</label><input type="checkbox" checked="checked" onclick="comandManager.showComponents(this)">
+			<label>Show components</label><input id="showComponentsFlag" type="checkbox" checked="checked" onclick="comandManager.showComponents(this)">
 			</div>
 			<div>
-			<label>Show terminals</label><input type="checkbox" checked="checked" onclick="comandManager.showTerminals(this)">
+			<label>Show terminals</label><input id="showTerminalsFlag" type="checkbox" checked="checked" onclick="comandManager.showTerminals(this)">
 			</div>
 			<div>
-			<label>Show paths</label><input type="checkbox" checked="checked" onclick="comandManager.showPaths(this)">
+			<label>Show paths</label><input id="showPathsFlag" type="checkbox" checked="checked" onclick="comandManager.showPaths(this)">
 			</div>
 		</div>
 			<button onclick="comandManager.onSave()">Save</button>
-			<button onclick="comandManager.exportToImage()">To Image</button>
+			<button onclick="comandManager.exportToImage()">To Image:</button>
+			<input type="number" id="imgMultiplier" value="1" style="width:50"/> 
 		</div>
 		
 		<div id="controlsBase">
