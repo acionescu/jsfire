@@ -163,6 +163,21 @@ Point.prototype.rotate2D = function(drot) {
     this.coords = newCoord;
 };
 
+Point.prototype.equals=function(other){
+    if(this.coords.length != other.coords.length){
+	return false;
+    }
+    
+    for(var i=0;i<other.coords.length;i++){
+	if(this.coords[i] != other.coords[i]){
+	    return false;
+	}
+    }
+    
+    return true;
+};
+
+
 function Shape(strokeColor, fillColor) {
     /**
      * allow drawing
@@ -383,6 +398,17 @@ CustomShape.prototype.fromJSON=function(json){
 	this.points = json.points.map(function(p){
 	   return new Point(p.coords); 
 	});
+    }
+};
+
+CustomShape.prototype.toGerber = function(writer){
+    if(this.points.length <= 0 ){
+	return;
+    }
+    
+    writer.move(this.points[0]);
+    for(var i=1;i<this.points.length;i++){
+	writer.draw(this.points[1]);
     }
 };
 

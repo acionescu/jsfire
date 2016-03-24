@@ -110,8 +110,10 @@ Tool:
 	
 	
 	
-		<script src="../core/util.js"></script>
+	<script src="../core/util.js"></script>
 	<script src="../core/particle.js"></script>
+	<script src="../gerber/gerber.js"></script>
+	
 	<script src="pcb.js"></script>
 	<script src="devices.js"></script>
 	<script src="components.js"></script>
@@ -136,6 +138,14 @@ Tool:
 
 	universe.update();
 	
+	
+	var gerberExporter = new GerberWriter();
+	
+	pcb1.pathsToGerber(gerberExporter);
+	
+	gerberExporter.close();
+	
+	console.log(gerberExporter.commandStream);
 	
     </script>
 </body>

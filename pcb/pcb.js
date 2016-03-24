@@ -366,6 +366,13 @@ PCB.prototype.fromJSON = function(json){
     
 };
 
+PCB.prototype.pathsToGerber=function(writer){
+    writer.setLevelPolarity(1);
+    this.paths.parts.forEach(function(p){
+	p.toGerber(writer);
+    });
+};
+
 PCB.prototype.addComponent = function(component,id) {
     this.components.push(component);
 //    this.addPart(component.footprint);
@@ -480,6 +487,9 @@ PCB.prototype.createNewTrackPoint = function(pos,id) {
     return tp;
 };
 
+
+
+
 /* The symbolic representation of a one to one connection */
 function Path(pcb,width) {
     /* a path is actually a sequence of track points */
@@ -547,6 +557,16 @@ Path.prototype.fromJSON = function(json){
     
     this.setComplete();
 };
+
+
+Path.prototype.toGerber = function(writer){
+    if(this.trackPoints.length <=0 ){
+        return;
+    }  
+    writer.setCircleAperture(this.width);
+    this.shape.toGerber(writer);
+  };
+
 
 Path.prototype.setWidth = function(width){
     if(width == undefined || width <= 0){

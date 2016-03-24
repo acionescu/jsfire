@@ -670,3 +670,6 @@ var comandManager = {
 console.log("start");
 updateSelectedTool();
 
+
+
+
