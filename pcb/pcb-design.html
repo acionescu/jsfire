@@ -90,6 +90,10 @@ Tool:
 			<button onclick="comandManager.onSave()">Save</button>
 			<button onclick="comandManager.exportToImage()">To Image:</button>
 			<input type="number" id="imgMultiplier" value="1" style="width:50"/> 
+			<div style="margin-top: 5px">
+				<button onclick="comandManager.exportToGerber()">To Gerber</button>
+			</div>
+			
 		</div>
 		
 		<div id="controlsBase">
@@ -137,15 +141,6 @@ Tool:
 	// 	universe.start(20);
 
 	universe.update();
-	
-	
-	var gerberExporter = new GerberWriter();
-	
-	pcb1.pathsToGerber(gerberExporter);
-	
-	gerberExporter.close();
-	
-	console.log(gerberExporter.commandStream);
 	
     </script>
 </body>

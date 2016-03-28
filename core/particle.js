@@ -122,6 +122,14 @@ Point.prototype.checkPointDimension = function(point) {
     }
 };
 
+Point.prototype.x = function(){
+    return this.coords[0];
+};
+
+Point.prototype.y = function(){
+    return this.coords[1];
+};
+
 Point.prototype.add = function(point) {
     this.checkPointDimension(point);
 
@@ -408,7 +416,7 @@ CustomShape.prototype.toGerber = function(writer){
     
     writer.move(this.points[0]);
     for(var i=1;i<this.points.length;i++){
-	writer.draw(this.points[1]);
+	writer.draw(this.points[i]);
     }
 };
 

@@ -551,6 +551,26 @@ var comandManager = {
 	    window.open(url, '_blank');
 	    window.focus();
 	},
+	
+	exportToGerber : function(){
+	    	var gerberExporter = new GerberWriter();
+		
+	    	CONTEXT.selectedPcb.pathsToGerber(gerberExporter);
+		
+		gerberExporter.close();
+		
+		var out ="";
+		
+		gerberExporter.commandStream.forEach(function(c){
+		    out+="\n"+c.toString(gerberExporter.context);
+		});
+		
+		
+		    var url = 'data:text/json;charset=utf8,' + encodeURIComponent(out);
+		    window.open(url, '_blank');
+		    window.focus();
+	},
+	
 	exportToImage : function(){
 	    
 	    /* get img multiplier */

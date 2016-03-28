@@ -368,6 +368,7 @@ PCB.prototype.fromJSON = function(json){
 
 PCB.prototype.pathsToGerber=function(writer){
     writer.setLevelPolarity(1);
+    writer.setLinearInterpolation();
     this.paths.parts.forEach(function(p){
 	p.toGerber(writer);
     });

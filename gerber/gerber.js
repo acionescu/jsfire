@@ -30,6 +30,19 @@ GERBER.TEMPLATES = {
 	
 };
 
+/**
+ * Represents a float as a string with the max length intp+decp
+ * @param intp - integer places
+ * @param decp - decimal places
+ */
+
+GERBER.valueAsString=function(value,intp,decp){
+    /* multiply the value with 10^decp, to convert to string */
+    var s = Math.round(value*Math.pow(10,decp)).toFixed(0);
+    /* now get the last intp+decp characters */
+    return s.substring(s.length-(intp+decp));
+};
+
 function GerberCommand(id,params){
     this.id=id;
     this.params = params;
@@ -38,12 +51,51 @@ function GerberCommand(id,params){
 
 GerberCommand.prototype.constructor=GerberCommand;
 
+GerberCommand.prototype.toString=function(context){
+    /* make sure we add the simple command treminator */
+    return this.asString(context)+"*";
+};
+
+/**
+ * Each command should override this to
+ * convert to string
+ */
+GerberCommand.prototype.asString=function(context){
+    return this.id+this.commandAsString(context);
+};
+
+/**
+ * To be overridden
+ * @param context
+ * @returns {String}
+ */
+GerberCommand.prototype.commandAsString = function(context){
+   /* by default just return the first parameter if present */
+    if(this.params && this.params.length > 0){
+	return this.params[0];
+    }
+    return "";
+};
+
 function GerberOperation(id,params){
     GerberCommand.call(this,id, params);
 }
 
 GerberOperation.prototype = Object.create(GerberCommand.prototype);
 GerberOperation.prototype.constructor=GerberOperation;
+
+GerberOperation.prototype.commandAsString=function(context){
+    var format = context.format;
+    var point = this.params[0];
+    var out = "X"+GERBER.valueAsString(point.x(),format.intp,format.decp)+"Y"+GERBER.valueAsString(-point.y(),format.intp,format.decp);
+    
+    return out;
+};
+
+GerberOperation.prototype.asString=function(context){
+   
+    return this.commandAsString(context)+this.id;
+};
 
 function GerberExtendedCommand(id,params){
     GerberCommand.call(this,id,params);
@@ -53,8 +105,10 @@ GerberExtendedCommand.prototype = Object.create(GerberCommand.prototype);
 GerberExtendedCommand.prototype.constructor=GerberExtendedCommand;
 
 
-
-
+GerberExtendedCommand.prototype.toString = function(context){
+      var out = GerberCommand.prototype.toString.apply(this,context);
+      return "%"+out+"%";
+};
 
 
 GERBER.D01 = function(point,offset){
@@ -64,13 +118,33 @@ GERBER.D01 = function(point,offset){
 GERBER.D01.prototype = Object.create(GerberOperation.prototype);
 GERBER.D01.prototype.constructor=GERBER.D01;
 
+GERBER.D01.prototype.commandAsString = function(context){
+    var out = GerberOperation.prototype.commandAsString.apply(this,arguments);
+    
+    /* for G02 and G03 interpolation modes consider the offset too */
+    if(context.interpolationMode == "G02" || context.interpolationMode == "G03"){
+	var format = context.format;
+	var offset = this.params[1];
+	if(offset){
+	    out+="I"+GERBER.valueAsString(offset.x(), format.intp,format.decp)+"J"+GERBER.valueAsString(offset.Y(), format.intp,format.decp);
+	}
+    }
+    
+    return out;
+};
+
 
 GERBER.setFormat = function(intp,decp){
-    return new GerberExtendedCommand("FSLA",[intp,decp]);
+    var cmd = new GerberExtendedCommand("FSLA",[intp,decp]);
+    /* local implementation of commandAsString */
+    cmd.commandAsString=function(context){
+	return "X"+intp+decp+"Y"+intp+decp;
+    };
+    return cmd;
 };
 
 GERBER.setUnit = function(unit){
-    return new GerberExtendedCommand("MM",[unit]);
+    return new GerberExtendedCommand("MO",[unit]);
 };
 
 GERBER.defineMacro=function(mid,macro){
@@ -78,7 +152,13 @@ GERBER.defineMacro=function(mid,macro){
 };
 
 GERBER.defineAperture=function(dcode, ap){
-    return new GerberExtendedCommand("ADD",[dcode,ap]);
+    var cmd = new GerberExtendedCommand("ADD",[dcode,ap]);
+    
+    /* local implementation of commandAsString */
+    cmd.commandAsString=function(context){
+	return dcode + ap.toString(context);
+    };
+    return cmd;
 };
 
 GERBER.setAperture=function(dcode){
@@ -89,6 +169,7 @@ GERBER.setAperture=function(dcode){
 GERBER.setLevelPolarity=function(isDark){
     return new GerberExtendedCommand("LP",[isDark?"D":"C"]);
 };
+
 
 GERBER.draw=function(point,offset){
     return new GERBER.D01(point, offset);
@@ -107,11 +188,25 @@ GERBER.endFile = function(){
     return new GerberCommand("M02");
 };
 
+GERBER.setLinearInterpolation = function(){
+    return new GerberCommand("G01");
+};
+
+GERBER.setClockwiseInterpolation = function(){
+    return new GerberCommand("G02");
+};
+
+GERBER.setAntiClockWiseInterpolation = function(){
+    return new GerberCommand("G03");
+};
+
 
 function GerberAperture(tid,modifiers){
     /* aperture template id */
     this.tid = tid;
     this.modifiers=modifiers;
+    /* store signature */
+    this.signature;
 
 }
 
@@ -129,8 +224,19 @@ GerberAperture.prototype.generateSignature=function(decp){
 	}
 	as+="X"+cm.toFixed(decp);
     }
+    /* save signature */
+    this.signature = as;
     return as;
 };
+
+
+GerberAperture.prototype.toString=function(context){
+    if(!this.signature){
+	this.generateSignature(context.format.decp);
+    }
+    return this.signature;
+};
+
 
 function GerberContext(){
     /* by default the format will have 3 integer digits and 6 decimal digits */
@@ -267,6 +373,28 @@ GerberWriter.prototype.setCircleAperture=function(diameter, holeDiameter){
     return this.setAperture(this.context.getAperture("C",[diameter,holeDiameter],true));
 };
 
+GerberWriter.prototype.setLinearInterpolation=function(){
+    this.updateInterpolation(GERBER.setLinearInterpolation());
+    
+};
+
+GerberWriter.prototype.setClockwiseInterpolation=function(){
+    this.updateInterpolation(GERBER.setClockwiseInterpolation());
+    
+};
+
+GerberWriter.prototype.setAntiClockwiseInterpolation=function(){
+    this.updateInterpolation(GERBER.setAntiClockwiseInterpolation());
+    
+};
+
+GerberWriter.prototype.updateInterpolation=function(command){
+    if(this.context.interpolationMode != command.id){
+	this.context.interpolationMode = command.id;
+	this.pushCommand(command);
+    }
+};
+
 GerberWriter.prototype.move=function(point){
     if(!this.context.currentPoint.equals(point)){
 	this.context.setCurrentPoint(point);
@@ -277,7 +405,7 @@ GerberWriter.prototype.move=function(point){
 
 GerberWriter.prototype.draw=function(point,offset){
     this.pushCommand(GERBER.draw(point, offset));
-    
+    this.context.setCurrentPoint(point);
 };
 
 GerberWriter.prototype.flash=function(point){
