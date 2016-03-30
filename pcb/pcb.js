@@ -366,12 +366,45 @@ PCB.prototype.fromJSON = function(json){
     
 };
 
-PCB.prototype.pathsToGerber=function(writer){
-    writer.setLevelPolarity(1);
-    writer.setLinearInterpolation();
+PCB.prototype.pathsToGerber=function(exporter){
+    exporter.setLevelPolarity(1);
+    exporter.setLinearInterpolation();
     this.paths.parts.forEach(function(p){
-	p.toGerber(writer);
+	p.toGerber(exporter);
     });
+};
+
+/**
+ * Export terminals footprints
+ * @param exporter
+ */
+PCB.prototype.terminalsToGerber=function(exporter){
+    this.components.forEach(function(c){
+	c.terminals.forEach(function(t){
+	   t.toGerber(exporter);
+	});
+    });
+};
+
+
+PCB.prototype.holesToGerber=function(exporter){
+    exporter.setLevelPolarity(1);
+    exporter.setLinearInterpolation();
+    
+    this.components.forEach(function(c){
+	c.terminals.forEach(function(t){
+	   /* export holes for THTs */
+	    if(t.hole){
+		t.hole.toGerber(exporter);
+	    }
+	});
+    });
+    
+    /* export screw holes */
+    this.holesLayer.parts.forEach(function(p){
+	p.toGerber(exporter);
+    });
+    
 };
 
 PCB.prototype.addComponent = function(component,id) {
@@ -875,6 +908,11 @@ Hole.prototype.setRadius=function(radius){
     this.shape= new Circle(radius, this.shape.strokeColor, this.shape.fillColor);
 };
 
+Hole.prototype.toGerber = function(context){
+    context.setCircleAperture(this.shape.radius*2);
+    context.flash(this.getPosition());
+};
+
 
 function ScrewHole(label,radius){
     PcbElement.call(this,label);
@@ -890,7 +928,9 @@ function ScrewHole(label,radius){
 ScrewHole.prototype = new PcbElement();
 ScrewHole.prototype.constructor = ScrewHole;
 
-
+ScrewHole.prototype.toGerber=function(context){
+  this.footprint.toGerber(context);  
+};
 
 function ScrewHoleShape(radius, strokeColor, fillColor) {
    

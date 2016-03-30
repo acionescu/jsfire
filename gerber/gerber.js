@@ -409,7 +409,8 @@ GerberWriter.prototype.draw=function(point,offset){
 };
 
 GerberWriter.prototype.flash=function(point){
-    
+    this.pushCommand(GERBER.flash(point));
+    this.context.setCurrentPoint(point);
     
 };
 

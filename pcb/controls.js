@@ -553,9 +553,31 @@ var comandManager = {
 	},
 	
 	exportToGerber : function(){
+	    
+	    var showTerminals = document.getElementById("showTerminalsFlag").checked;
+	    
+	    var showPaths = document.getElementById("showPathsFlag").checked;
+	    
+	    var showHoles = document.getElementById("showHolesFlag").checked;
+	    	
+	    
 	    	var gerberExporter = new GerberWriter();
-		
-	    	CONTEXT.selectedPcb.pathsToGerber(gerberExporter);
+	    	
+	    	/* holes can only be exported by themselves */
+	    	if(showHoles){
+	    	    CONTEXT.selectedPcb.holesToGerber(gerberExporter);
+	    	}
+	    	else{
+        	    	if(showPaths){
+        		
+        	    	    CONTEXT.selectedPcb.pathsToGerber(gerberExporter);
+        	    	    
+        	    	}
+        	    	
+        	    	if(showTerminals){
+        	    	    //TODO
+        	    	}
+	    	}
 		
 		gerberExporter.close();
 		
@@ -679,6 +701,12 @@ var comandManager = {
 	showPaths : function(checkbox){
 	    
 	    CONTEXT.selectedPcb.setPathsVisible(checkbox.checked);
+	    universe.update();
+	}
+	,
+	showHoles : function(checkbox){
+	    
+	    CONTEXT.selectedPcb.setHolesVisible(checkbox.checked);
 	    universe.update();
 	}
 	,
