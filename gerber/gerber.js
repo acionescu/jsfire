@@ -373,6 +373,15 @@ GerberWriter.prototype.setCircleAperture=function(diameter, holeDiameter){
     return this.setAperture(this.context.getAperture("C",[diameter,holeDiameter],true));
 };
 
+GerberWriter.prototype.setRectangleAperture=function(width,height,holeDiameter){
+    return this.setAperture(this.context.getAperture("R",[width,height,holeDiameter],true));
+};
+
+GerberWriter.prototype.setObroundAperture=function(width,height,holeDiameter){
+    return this.setAperture(this.context.getAperture("O",[width,height,holeDiameter],true));
+};
+
+
 GerberWriter.prototype.setLinearInterpolation=function(){
     this.updateInterpolation(GERBER.setLinearInterpolation());
     

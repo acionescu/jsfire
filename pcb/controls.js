@@ -563,6 +563,11 @@ var comandManager = {
 	    
 	    	var gerberExporter = new GerberWriter();
 	    	
+	    	var prevPos = CONTEXT.selectedPcb.getPosition();
+	    	
+	    	CONTEXT.selectedPcb.setPosition(0,0);
+	    	
+	    	
 	    	/* holes can only be exported by themselves */
 	    	if(showHoles){
 	    	    CONTEXT.selectedPcb.holesToGerber(gerberExporter);
@@ -575,7 +580,7 @@ var comandManager = {
         	    	}
         	    	
         	    	if(showTerminals){
-        	    	    //TODO
+        	    	    CONTEXT.selectedPcb.terminalsToGerber(gerberExporter);
         	    	}
 	    	}
 		
@@ -586,6 +591,8 @@ var comandManager = {
 		gerberExporter.commandStream.forEach(function(c){
 		    out+="\n"+c.toString(gerberExporter.context);
 		});
+		
+		CONTEXT.selectedPcb.move(prevPos.x(),prevPos.y());
 		
 		
 		    var url = 'data:text/json;charset=utf8,' + encodeURIComponent(out);

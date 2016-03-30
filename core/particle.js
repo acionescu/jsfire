@@ -233,6 +233,8 @@ Shape.prototype.fromJSON=function(json){
 	this.fillColor=json.fillColor;
 };
 
+
+
 function Rectangle(w, h, strokeColor, fillColor) {
     Shape.call(this, strokeColor, fillColor);
     this.width = w;
@@ -245,6 +247,11 @@ function Rectangle(w, h, strokeColor, fillColor) {
 
 Rectangle.prototype = new Shape();
 Rectangle.prototype.constructor = Rectangle;
+
+Rectangle.prototype.toGerber = function(exporter, position, scale, rotation){
+    exporter.setRectangleAperture(this.width,this.height);
+    exporter.flash(position);
+};
 
 Rectangle.prototype.compute = function(position,scale,rotation){
     var coords = position.coords;
@@ -322,6 +329,14 @@ function Ellipse(radX, radY, strokeColor, fillColor) {
 Ellipse.prototype = new Shape();
 Ellipse.prototype.constructor = Ellipse;
 
+Ellipse.prototype.toGerber = function(exporter, position, scale, rotation){
+    /* approximates the ellipse with an obround */
+    exporter.setObroundAperture(this.radX*2,this.radY*2);
+    exporter.flash(position);
+};
+
+
+
 Ellipse.prototype.compute = function(position, scale, rotation){
     var coords = position.coords;
 
@@ -379,6 +394,11 @@ function Circle(radius, strokeColor, fillColor) {
 
 Circle.prototype = new Ellipse();
 Circle.prototype.constructor = Circle;
+
+Circle.prototype.toGerber = function(exporter, position, scale, rotation){
+    exporter.setCircleAperture(this.radius*2);
+    exporter.flash(position);
+};
 
 
 function CustomShape(points) {
@@ -559,6 +579,15 @@ PhysicalObject.prototype.fromJSON=function(json){
     /* do something with parent and parts */
 };
 
+
+
+
+PhysicalObject.prototype.toGerber=function(exporter,scale){
+    if(this.shape){
+	this.shape.toGerber(exporter,this.position,scale,this.rotation);
+    }
+};
+
 /**
  * Called when this object is added to the universe
  * 
@@ -611,7 +640,7 @@ PhysicalObject.prototype.isVisible  = function(){
 };
 
 PhysicalObject.prototype.getPosition=function(){
-    return this.position;
+    return this.position.copy();
 };
 
 PhysicalObject.prototype.setRelativePos = function(x, y) {

@@ -37,6 +37,11 @@ PcbElement.prototype.fromJSON=function(json){
   
 };
 
+
+PcbElement.prototype.toGerber = function(exporter, scale){
+    this.footprint.toGerber(exporter, scale);
+};
+
 PcbElement.prototype.setFootprint=function(footprint){
     this.footprint = footprint;
     this.footprint.element = this;
@@ -906,11 +911,6 @@ Hole.prototype.fromJSON=function(json){
 
 Hole.prototype.setRadius=function(radius){
     this.shape= new Circle(radius, this.shape.strokeColor, this.shape.fillColor);
-};
-
-Hole.prototype.toGerber = function(context){
-    context.setCircleAperture(this.shape.radius*2);
-    context.flash(this.getPosition());
 };
 
 
