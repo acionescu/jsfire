@@ -603,7 +603,7 @@ Path.prototype.toGerber = function(writer){
         return;
     }  
     writer.setCircleAperture(this.width);
-    this.shape.toGerber(writer);
+    PhysicalObject.prototype.toGerber.apply(this,arguments);
   };
 
 
@@ -911,6 +911,7 @@ Hole.prototype.fromJSON=function(json){
 
 Hole.prototype.setRadius=function(radius){
     this.shape= new Circle(radius, this.shape.strokeColor, this.shape.fillColor);
+    console.log("hole set radius "+radius);
 };
 
 

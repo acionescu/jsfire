@@ -109,7 +109,7 @@ Point.prototype.distance = function(point) {
 };
 
 Point.prototype.copy = function(){
-    return new Point([this.coords[0],this.coords[1]]);
+    return new Point(this.coords.slice());
 };
 
 Point.prototype.checkPointDimension = function(point) {
@@ -169,6 +169,26 @@ Point.prototype.rotate2D = function(drot) {
     newCoord[1] = this.coords[0] * rotsin + this.coords[1] * rotcos;
 
     this.coords = newCoord;
+};
+
+
+/**
+ * 
+ * @param scale - array with scaling factor for each dimension
+ * @returns {Point}
+ */
+Point.prototype.scale = function(scale){
+    if(scale){
+    
+        this.checkPointDimension(scale);
+        var nc = [];
+    
+        for (var i = 0; i < this.coords.length; i++) {
+    		nc[i] = this.coords[i]*scale[i];
+        }
+        return new Point(nc);
+    }
+    return this.copy();
 };
 
 Point.prototype.equals=function(other){
@@ -429,14 +449,16 @@ CustomShape.prototype.fromJSON=function(json){
     }
 };
 
-CustomShape.prototype.toGerber = function(writer){
+CustomShape.prototype.toGerber = function(writer, position, scale, rotation){
     if(this.points.length <= 0 ){
 	return;
     }
     
-    writer.move(this.points[0]);
+    var p = this.points[0].add(position).scale(scale);
+    
+    writer.move(p);
     for(var i=1;i<this.points.length;i++){
-	writer.draw(this.points[i]);
+	writer.draw(this.points[i].add(position).scale(scale));
     }
 };
 

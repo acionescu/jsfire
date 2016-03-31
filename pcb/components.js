@@ -259,7 +259,7 @@ PushButton_B3F_1022.prototype.toDevice = function() {
 
 function ResistanceComp(label) {
     ElectronicComponent.call(this, label);
-    this.createTerminals(2);
+    this.createTerminals(2,"t",0.3);
 }
 
 ResistanceComp.prototype = new ElectronicComponent();

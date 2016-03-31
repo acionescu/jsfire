@@ -23,3 +23,9 @@ CONTEXT.selectedPcb.fromJSON(savedPcbData);
 //pcb1.addHole(new ScrewHole("screw hole 1",1.45));
 
 
+pcb1.setPosition(25, 35);
+//universe.update();
+
+
+
+

@@ -126,12 +126,13 @@ universe.setScale([ 4.7, 4.7 ]);
 pcb1.shape = new Rectangle(50, 70,'#000000');
 //pcb1.shape.strokeColor=undefined;
 
-pcb1.setPosition(70, 60);
+//pcb1.setPosition(25, 35);
 pcb1.selectable = false;
 
 
 pcb1.onComponentsPopulated=function(pcb){
     universe.addObject(pcb1);
+    
     
 };
 

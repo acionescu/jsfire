@@ -565,7 +565,12 @@ var comandManager = {
 	    	
 	    	var prevPos = CONTEXT.selectedPcb.getPosition();
 	    	
-	    	CONTEXT.selectedPcb.setPosition(0,0);
+	    	  /* get pcb dimensions */
+		    var pcbWidth = CONTEXT.selectedPcb.shape.width;
+		    var pcbHeight = CONTEXT.selectedPcb.shape.height;
+	    	
+	    	
+	    	CONTEXT.selectedPcb.setPosition(pcbWidth/2,-pcbHeight/2);
 	    	
 	    	
 	    	/* holes can only be exported by themselves */
@@ -592,7 +597,7 @@ var comandManager = {
 		    out+="\n"+c.toString(gerberExporter.context);
 		});
 		
-		CONTEXT.selectedPcb.move(prevPos.x(),prevPos.y());
+		CONTEXT.selectedPcb.setPosition(prevPos.x(),prevPos.y());
 		
 		
 		    var url = 'data:text/json;charset=utf8,' + encodeURIComponent(out);
