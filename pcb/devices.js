@@ -41,6 +41,10 @@ DeviceTypes.RESISTANCE = {
     N : "RES"
 };
 
+DeviceTypes.TRIMMER={
+	N : "TRIMMER"
+};
+
 DeviceTypes.CAPACITOR = {
     N : "CAP",
     T : {
@@ -82,6 +86,13 @@ DeviceTypes.QUARTZ = {
 /* MCUs */
 DeviceTypes.ATMEGA_328 = {
     N : "Atmega328"
+};
+
+
+/* Other */
+
+DeviceTypes.PIEZO={
+	N:"PIEZO"
 };
 
 /**
@@ -147,6 +158,24 @@ function Resistance(label, comp, mappings) {
 Resistance.prototype = new ElectronicDevice();
 Resistance.prototype.constructor = Resistance;
 
+
+function Trimmer(label,comp,mappings){
+    ElectronicDevice
+    .call(this, DeviceTypes.TRIMMER.N, label, comp, mappings);
+}
+
+/* inherit from Resistance */
+Trimmer.prototype = Object.create(Resistance.prototype);
+Trimmer.prototype.constructor=Trimmer;
+
+
+function Piezo(label,comp,mappings){
+    ElectronicDevice
+    .call(this, DeviceTypes.PIEZO.N, label, comp, mappings);
+}
+
+Piezo.prototype = Object.create(ElectronicDevice.prototype);
+Piezo.prototype.constructor=Piezo;
 
 /**
  * Generic capacitor

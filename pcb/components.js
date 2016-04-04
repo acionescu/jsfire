@@ -641,6 +641,55 @@ QuartzCrystalHC49_S.prototype.toDevice = function() {
 };
 
 
+function LongWiresPiezo(label){
+    ElectronicComponent.call(this, label);
+    this.createTerminals(2);
+
+    this.terminals[0].footprint.shape = PcbUtil.generators
+    .standardTerminalFootprint();
+    this.terminals[1].footprint.shape = PcbUtil.generators
+        .standardTerminalFootprint();
+    
+    this.terminals[0].footprint.setRelativePos(-2.5, 0);
+    this.terminals[1].footprint.setRelativePos(2.5, 0);
+    
+    var shape = new Rectangle(11, 4, '#000000');
+        
+    this.footprint.shape = shape;
+    
+}
+
+LongWiresPiezo.prototype = Object.create(ElectronicComponent.prototype);
+LongWiresPiezo.prototype.constructor = LongWiresPiezo;
+
+
+
+function Trimmer_RKT6V_1M(label){
+    ElectronicComponent.call(this, label);
+    this.createTerminals(3);
+    
+    var t0= this.terminals[0];
+    var t1 = this.terminals[1];
+    var t2 = this.terminals[2];
+    
+    t0.footprint.shape = PcbUtil.generators.standardTerminalFootprint();
+    t1.footprint.shape = PcbUtil.generators.standardTerminalFootprint();
+    t2.footprint.shape = PcbUtil.generators.standardTerminalFootprint();
+    
+    t0.setLabel("0");
+    t1.setLabel("1");
+    t2.setLabel("2");
+    
+    t0.footprint.setRelativePos(-2.5, 0);
+    t2.footprint.setRelativePos(2.5, 0);
+    t1.footprint.setRelativePos(0, -5);
+    
+}
+
+Trimmer_RKT6V_1M.prototype = Object.create(ElectronicComponent.prototype);
+Trimmer_RKT6V_1M.prototype.constructor = Trimmer_RKT6V_1M;
+
+
 function Via(id,label,radius){
     ElectronicComponent.call(this, label);
     this.id=id;
