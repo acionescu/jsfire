@@ -650,10 +650,10 @@ function LongWiresPiezo(label){
     this.terminals[1].footprint.shape = PcbUtil.generators
         .standardTerminalFootprint();
     
-    this.terminals[0].footprint.setRelativePos(-2.5, 0);
-    this.terminals[1].footprint.setRelativePos(2.5, 0);
+    this.terminals[0].footprint.setRelativePos(-1.25, 0);
+    this.terminals[1].footprint.setRelativePos(1.25, 0);
     
-    var shape = new Rectangle(11, 4, '#000000');
+    var shape = new Rectangle(6, 3, '#000000');
         
     this.footprint.shape = shape;
     
@@ -662,6 +662,10 @@ function LongWiresPiezo(label){
 LongWiresPiezo.prototype = Object.create(ElectronicComponent.prototype);
 LongWiresPiezo.prototype.constructor = LongWiresPiezo;
 
+
+LongWiresPiezo.prototype.toDevice=function(){
+    return new Piezo(this.label, this);
+};
 
 
 function Trimmer_RKT6V_1M(label){
@@ -680,14 +684,31 @@ function Trimmer_RKT6V_1M(label){
     t1.setLabel("1");
     t2.setLabel("2");
     
-    t0.footprint.setRelativePos(-2.5, 0);
-    t2.footprint.setRelativePos(2.5, 0);
-    t1.footprint.setRelativePos(0, -5);
+    t0.footprint.setRelativePos(-2.5, 2.5);
+    t2.footprint.setRelativePos(2.5, 2.5);
+    t1.footprint.setRelativePos(0, -2.5);
+    
+    var shape = new Rectangle(6.5, 7, '#000000');
+
+    /* dimensions of the button itself */
+    shape.radX = 3.25;
+    shape.radY = 3.25;
+
+    shape.draw = function(canvas, position, scale, rotation) {
+	Rectangle.prototype.draw.apply(this, arguments);
+	Ellipse.prototype.draw.apply(this, arguments);
+    };
+
+    this.footprint.shape = shape;
     
 }
 
 Trimmer_RKT6V_1M.prototype = Object.create(ElectronicComponent.prototype);
 Trimmer_RKT6V_1M.prototype.constructor = Trimmer_RKT6V_1M;
+
+Trimmer_RKT6V_1M.prototype.toDevice = function(){
+    return new Trimmer(this.label, this);
+};
 
 
 function Via(id,label,radius){

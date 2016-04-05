@@ -23,6 +23,10 @@ CONTEXT.selectedPcb.fromJSON(savedPcbData);
 //pcb1.addHole(new ScrewHole("screw hole 1",1.45));
 
 
+//pcb1.addComponent(new Trimmer_RKT6V_1M("vibSensTrimmer").toDevice().comp);
+//pcb1.addComponent(new LongWiresPiezo("vibSens").toDevice().comp);
+
+
 pcb1.setPosition(25, 35);
 //universe.update();
 
